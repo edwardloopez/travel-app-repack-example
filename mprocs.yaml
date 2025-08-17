@@ -1,0 +1,16 @@
+procs:
+  Host:
+    shell: pnpm start:travel-host
+    stop: SIGKILL
+  Weather:
+    shell: pnpm start:travel-weather
+    stop: SIGKILL
+  Destinations:
+    shell: pnpm start:travel-destinations
+    stop: SIGKILL
+  Search:
+    shell: pnpm start:travel-search
+    stop: SIGKILL
+  Photos:
+    shell: pnpm start:travel-photos
+    stop: SIGKILL

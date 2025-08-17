@@ -1,23 +1,48 @@
 {
-  "name": "travel-app-repack-example",
+  "name": "travel-repack-super-app",
   "version": "1.0.0",
-  "main": "index.ts",
-  "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+  "private": true,
+  "packageManager": "pnpm@10.10.0",
+  "engines": {
+    "node": ">=22"
   },
-  "dependencies": {
-    "expo": "~53.0.20",
-    "expo-status-bar": "~2.2.3",
-    "react": "19.0.0",
-    "react-native": "0.79.5"
+  "engineStrict": true,
+  "scripts": {
+    "start:travel-host": "pnpm --filter TravelHost start",
+    "start:travel-weather": "pnpm --filter TravelWeather start",
+    "start:travel-destinations": "pnpm --filter TravelDestinations start",
+    "start:travel-search": "pnpm --filter TravelSearch start",
+    "start:travel-photos": "pnpm --filter TravelPhotos start",
+    "start:standalone:travel-weather": "pnpm --filter TravelWeather start:standalone",
+    "start:standalone:travel-destinations": "pnpm --filter TravelDestinations start:standalone",
+    "start:standalone:travel-search": "pnpm --filter TravelSearch start:standalone",
+    "start:standalone:travel-photos": "pnpm --filter TravelPhotos start:standalone",
+    "run:travel-host:ios": "pnpm --filter TravelHost ios",
+    "run:travel-host:android": "pnpm --filter TravelHost android",
+    "start:travel:concurrently": "concurrently -n HOST,WEATHER,DESTINATIONS,SEARCH,PHOTOS -c green,blue,yellow,magenta,cyan \"pnpm run start:travel-host\" \"pnpm run start:travel-weather\" \"pnpm run start:travel-destinations\" \"pnpm run start:travel-search\" \"pnpm run start:travel-photos\" || true",
+    "start": "mprocs",
+    "typecheck": "nx run-many -t typecheck",
+    "lint:check": "nx run-many -t lint",
+    "lint": "nx run-many -t lint --fix --outputStyle static",
+    "test": "nx run-many -t test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "adbreverse": "nx run-many -t adbreverse",
+    "align-deps": "pnpm -r align-deps",
+    "check-deps": "pnpm -r check-deps"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
-    "@types/react": "~19.0.10",
-    "typescript": "~5.8.3"
+    "@nx/eslint": "21.0.2",
+    "@nx/eslint-plugin": "21.0.2",
+    "@nx/jest": "21.0.2",
+    "@nx/plugin": "21.0.2",
+    "concurrently": "^8.2.2",
+    "eslint": "~8.57.1",
+    "mprocs": "^0.7.1",
+    "nx": "21.0.2",
+    "prettier": "^3.4.2"
   },
-  "private": true
+  "dependencies": {
+    "@swc/helpers": "0.5.15"
+  }
 }

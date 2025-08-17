@@ -1,0 +1,34 @@
+{
+  "react": {
+    "name": "react",
+    "version": "19.0.0"
+  },
+  "react-native": {
+    "name": "react-native",
+    "version": "0.79.5"
+  },
+  "@react-navigation/native": {
+    "name": "@react-navigation/native",
+    "version": "^7.1.17"
+  },
+  "@react-navigation/native-stack": {
+    "name": "@react-navigation/native-stack",
+    "version": "^7.3.25"
+  },
+  "react-native-safe-area-context": {
+    "name": "react-native-safe-area-context",
+    "version": "5.4.0"
+  },
+  "react-native-screens": {
+    "name": "react-native-screens",
+    "version": "~4.11.1"
+  },
+  "@module-federation/enhanced": {
+    "name": "@module-federation/enhanced",
+    "version": "0.13.1"
+  },
+  "travel-core": {
+    "name": "travel-core",
+    "version": "0.0.1"
+  }
+}

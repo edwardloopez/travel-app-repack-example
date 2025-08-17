@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+build/
+dist/
+**/build/
+**/dist/
+**/.rnef/
+**/.expo/
+
+# Platform specific
+ios/
+android/
+**/ios/
+**/android/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Generated files
+*.bundle
+*.bundle.js
+*.bundle.js.map
+
+# Package manager
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated Metro cache
+.metro-health-check*
+
+# Auto-generated files
+**/Pods/
+**/*.xcworkspace/
+**/*.xcodeproj/
+
+# Bundle artifacts
+**/*.jsbundle
+
+# React Native
+**/.react-native/

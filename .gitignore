@@ -1,15 +1,49 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
+# Dependencies
 node_modules/
+**/node_modules/
+.pnp
+.pnp.js
 
-# Expo
+# Package managers
+package-lock.json
+yarn.lock
+.yarn/
+.yarnrc.yml
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# React Native / Expo
 .expo/
+.rnef/
 dist/
+build/
 web-build/
 expo-env.d.ts
+.expo-shared/
 
-# Native
+# Metro bundler
+.metro-health-check*
+metro-cache/
+.metro/
+
+# React Native builds
+ios/build/
+android/build/
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+android/.idea/
+android/local.properties
+android/app/release/
+
+# Native files
 .kotlin/
 *.orig.*
 *.jks
@@ -17,21 +51,155 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+*.keystore
+*.ipa
+*.apk
+*.aab
 
-# Metro
-.metro-health-check*
+# Fastlane
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots
+**/fastlane/test_output
 
-# debug
+# Bundle artifacts
+**/*.bundle
+**/*.bundle.js
+**/*.bundle.js.map
+**/*.jsbundle
+**/*.container.js.bundle
+**/*.container.js.bundle.map
+
+# Environment variables
+.env
+.env*.local
+.env.development
+.env.production
+.env.staging
+.environment
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+lerna-debug.log*
+.npm
 
-# macOS
-.DS_Store
-*.pem
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
 
-# local env files
-.env*.local
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
 
-# typescript
+# nyc test coverage
+.nyc_output
+
+# TypeScript
 *.tsbuildinfo
+.tsbuildinfo
+
+# Temporary folders
+tmp/
+temp/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Webpack Bundle Analyzer
+webpack-stats.json
+
+# NX
+.nx/cache
+.nx/workspace-data
+
+# Re.Pack specific
+**/.rnef/
+**/rspack-stats.json
+
+# Module Federation
+**/federation-stats.json
+**/module-federation-manifest.json
+
+# Flipper
+**/.flipper/
+
+# CocoaPods
+**/Pods/
+**/*.xcworkspace
+**/Podfile.lock
+
+# Ruby / Fastlane
+.bundle/
+vendor/
+Gemfile.lock
