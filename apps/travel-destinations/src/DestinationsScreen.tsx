@@ -39,7 +39,8 @@ const DestinationsScreen: React.FC = () => {
       country: 'France',
       description:
         'The City of Light with iconic landmarks and romantic atmosphere',
-      imageUrl: 'https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Paris',
+      imageUrl:
+        'https://plus.unsplash.com/premium_photo-1718035557075-5111d9d906d2?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       rating: 4.8,
       price: 1200,
       category: 'City',
@@ -49,7 +50,8 @@ const DestinationsScreen: React.FC = () => {
       name: 'Bali',
       country: 'Indonesia',
       description: 'Tropical paradise with beautiful beaches and rich culture',
-      imageUrl: 'https://via.placeholder.com/300x200/50C878/FFFFFF?text=Bali',
+      imageUrl:
+        'https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       rating: 4.6,
       price: 800,
       category: 'Beach',
@@ -59,7 +61,8 @@ const DestinationsScreen: React.FC = () => {
       name: 'Tokyo',
       country: 'Japan',
       description: 'Modern metropolis blending tradition and innovation',
-      imageUrl: 'https://via.placeholder.com/300x200/FF6B6B/FFFFFF?text=Tokyo',
+      imageUrl:
+        'https://plus.unsplash.com/premium_photo-1661914240950-b0124f20a5c1?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       rating: 4.7,
       price: 1500,
       category: 'City',
@@ -70,7 +73,7 @@ const DestinationsScreen: React.FC = () => {
       country: 'Greece',
       description: 'Stunning island with white buildings and blue domes',
       imageUrl:
-        'https://via.placeholder.com/300x200/87CEEB/FFFFFF?text=Santorini',
+        'https://plus.unsplash.com/premium_photo-1661964149725-fbf14eabd38c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       rating: 4.9,
       price: 1000,
       category: 'Island',
@@ -80,7 +83,8 @@ const DestinationsScreen: React.FC = () => {
       name: 'Swiss Alps',
       country: 'Switzerland',
       description: 'Majestic mountains perfect for skiing and hiking',
-      imageUrl: 'https://via.placeholder.com/300x200/228B22/FFFFFF?text=Alps',
+      imageUrl:
+        'https://images.unsplash.com/photo-1527668752968-14dc70a27c95?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       rating: 4.5,
       price: 1800,
       category: 'Mountain',
@@ -91,7 +95,7 @@ const DestinationsScreen: React.FC = () => {
       country: 'Maldives',
       description: 'Luxury overwater bungalows in crystal clear waters',
       imageUrl:
-        'https://via.placeholder.com/300x200/00CED1/FFFFFF?text=Maldives',
+        'https://images.unsplash.com/photo-1573843981267-be1999ff37cd?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       rating: 4.8,
       price: 2500,
       category: 'Beach',

@@ -54,8 +54,7 @@ const SearchScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(() => resolve(undefined), 1000));
 
       let filteredResults = mockResults.filter(
         result =>
@@ -76,7 +75,6 @@ const SearchScreen: React.FC = () => {
 
       setResults(filteredResults);
     } catch (error) {
-      Alert.alert('Error', 'Failed to search. Please try again.');
       console.error('Search Error:', error);
     } finally {
       setLoading(false);
@@ -108,8 +106,6 @@ const SearchScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>🔍 Travel Search</Text>
-
-      {/* Search Type Selector */}
       <View style={styles.typeSelector}>
         {['all', 'flights', 'hotels', 'destinations'].map(type => (
           <TouchableOpacity
@@ -126,13 +122,12 @@ const SearchScreen: React.FC = () => {
                 searchType === type && styles.typeButtonTextActive,
               ]}
             >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
+              {type}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Search Input */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
@@ -146,7 +141,6 @@ const SearchScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Results */}
       {results.length > 0 && (
         <View style={styles.resultsContainer}>
           <Text style={styles.resultsTitle}>
@@ -219,6 +213,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   typeButtonActive: {
     backgroundColor: '#007bff',
@@ -227,6 +222,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6c757d',
     fontWeight: '600',
+    textTransform: 'capitalize',
   },
   typeButtonTextActive: {
     color: 'white',

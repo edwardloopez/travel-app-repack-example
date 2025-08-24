@@ -106,11 +106,9 @@ const PhotosScreen: React.FC = () => {
   const loadPhotos = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(() => resolve(undefined), 1000));
       setPhotos(mockPhotos);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load photos. Please try again.');
       console.error('Photos loading error:', error);
     } finally {
       setLoading(false);
@@ -164,7 +162,7 @@ const PhotosScreen: React.FC = () => {
           filter === filterName && styles.filterChipTextActive,
         ]}
       >
-        {filterName.charAt(0).toUpperCase() + filterName.slice(1)}
+        {filterName}
       </Text>
     </TouchableOpacity>
   );
@@ -189,7 +187,6 @@ const PhotosScreen: React.FC = () => {
         </Text>
       </View>
 
-      {/* Filter Chips */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -199,7 +196,6 @@ const PhotosScreen: React.FC = () => {
         {filters.map(renderFilterChip)}
       </ScrollView>
 
-      {/* Photos Grid */}
       <FlatList
         data={filteredPhotos}
         renderItem={renderPhotoItem}
@@ -210,7 +206,6 @@ const PhotosScreen: React.FC = () => {
         columnWrapperStyle={styles.row}
       />
 
-      {/* Photo Modal */}
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -289,6 +284,8 @@ const styles = StyleSheet.create({
   filtersContainer: {
     paddingHorizontal: 20,
     marginBottom: 15,
+    flexGrow: 0,
+    height: 50,
   },
   filtersContent: {
     paddingRight: 20,
@@ -298,6 +295,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 10,
   },
   filterChipActive: {
@@ -307,6 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7f8c8d',
     fontWeight: '600',
+    textTransform: 'capitalize',
   },
   filterChipTextActive: {
     color: 'white',
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },

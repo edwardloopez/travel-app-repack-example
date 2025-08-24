@@ -25,7 +25,7 @@ const App: React.FC = () => {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content"/>
+      <StatusBar barStyle="light-content" />
       <ThemeProvider>
         <TravelProvider>
           <NavigationContainer>

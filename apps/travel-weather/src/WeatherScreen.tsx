@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { LoadingSpinner, createAPIClient } from 'travel-core';
+import Config from 'react-native-config';
 
 interface WeatherData {
   location: string;
@@ -24,7 +25,8 @@ const WeatherScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [city, setCity] = useState('London');
 
-  const API_KEY = 'YOUR_OPENWEATHER_API_KEY';
+  const API_KEY = Config.OPENWEATHER_API_KEY;
+
   const apiClient = createAPIClient(
     'https://api.openweathermap.org/data/2.5',
     API_KEY
@@ -51,7 +53,7 @@ const WeatherScreen: React.FC = () => {
         icon: data.weather[0].icon,
       });
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch weather data. Please try again.');
+      // Alert.alert('Error', 'Failed to fetch weather data. Please try again.');
       console.error('Weather API Error:', error);
     } finally {
       setLoading(false);

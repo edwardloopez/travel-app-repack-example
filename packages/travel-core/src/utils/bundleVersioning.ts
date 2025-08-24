@@ -1,6 +1,6 @@
 /**
  * Bundle Versioning Utilities for Module Federation
- * 
+ *
  * Handles version-aware bundle loading and cache management
  */
 
@@ -30,7 +30,7 @@ export const REMOTE_CONFIGS: VersionedRemoteConfig = {
     fallbackUrl: 'https://cdn.yourapp.com/travel-weather',
   },
   TravelDestinations: {
-    version: '1.0.0', 
+    version: '1.0.0',
     url: 'http://localhost:9001',
     fallbackUrl: 'https://cdn.yourapp.com/travel-destinations',
   },
@@ -84,7 +84,7 @@ export function isVersionCompatible(
   // Simple semantic versioning check
   const [currentMajor, currentMinor] = currentVersion.split('.').map(Number);
   const [cachedMajor, cachedMinor] = cachedVersion.split('.').map(Number);
-  
+
   // Allow same major version, any minor/patch version
   return currentMajor === cachedMajor && currentMinor >= cachedMinor;
 }
@@ -126,11 +126,11 @@ export function generateVersionedRemotes(
   config: VersionedRemoteConfig = REMOTE_CONFIGS
 ): Record<string, string> {
   const remotes: Record<string, string> = {};
-  
+
   Object.keys(config).forEach(remoteName => {
     const versionedUrl = generateVersionedUrl(remoteName, platform, config);
     remotes[remoteName] = `${remoteName}@${versionedUrl}`;
   });
-  
+
   return remotes;
 }

@@ -13,7 +13,7 @@ import type { VersionedRemoteConfig } from 'travel-core';
 
 /**
  * Bundle Cache Debug Screen
- * 
+ *
  * Provides developer tools for managing bundle cache and versions
  * Only available in development builds
  */
@@ -37,7 +37,7 @@ const BundleCacheDebugScreen: React.FC = () => {
         getCacheStats(),
         loadRemoteConfig(),
       ]);
-      
+
       setCacheStats(stats);
       setRemoteConfig(config);
     } catch (error) {
@@ -98,7 +98,7 @@ const BundleCacheDebugScreen: React.FC = () => {
   const handleCheckUpdates = async () => {
     try {
       const updatedRemotes = await checkForUpdates(remoteConfig);
-      
+
       if (updatedRemotes.length > 0) {
         Alert.alert(
           'Updates Found',
@@ -107,7 +107,7 @@ const BundleCacheDebugScreen: React.FC = () => {
       } else {
         Alert.alert('No Updates', 'All bundles are up to date');
       }
-      
+
       await loadData();
     } catch (error) {
       Alert.alert('Error', 'Failed to check for updates');
@@ -118,7 +118,7 @@ const BundleCacheDebugScreen: React.FC = () => {
     try {
       const remoteNames = Object.keys(remoteConfig);
       await preloadBundles(remoteNames, 'ios', remoteConfig); // Using iOS as example
-      
+
       Alert.alert('Success', 'Bundles preloaded');
       await loadData();
     } catch (error) {
@@ -168,13 +168,13 @@ const BundleCacheDebugScreen: React.FC = () => {
         <TouchableOpacity style={styles.button} onPress={handleCheckUpdates}>
           <Text style={styles.buttonText}>Check for Updates</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.button} onPress={handlePreloadBundles}>
           <Text style={styles.buttonText}>Preload All Bundles</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, styles.dangerButton]} 
+
+        <TouchableOpacity
+          style={[styles.button, styles.dangerButton]}
           onPress={handleInvalidateAll}
         >
           <Text style={[styles.buttonText, styles.dangerText]}>
@@ -197,13 +197,15 @@ const BundleCacheDebugScreen: React.FC = () => {
             </View>
             <TouchableOpacity
               style={styles.clearButton}
-              onPress={() => handleInvalidateRemote(bundle.name, bundle.platform)}
+              onPress={() =>
+                handleInvalidateRemote(bundle.name, bundle.platform)
+              }
             >
               <Text style={styles.clearButtonText}>Clear</Text>
             </TouchableOpacity>
           </View>
         ))}
-        
+
         {(!cacheStats?.bundles || cacheStats.bundles.length === 0) && (
           <Text style={styles.emptyText}>No cached bundles</Text>
         )}
@@ -214,12 +216,8 @@ const BundleCacheDebugScreen: React.FC = () => {
         {Object.entries(remoteConfig).map(([name, config]) => (
           <View key={name} style={styles.configItem}>
             <Text style={styles.configName}>{name}</Text>
-            <Text style={styles.configDetails}>
-              Version: {config.version}
-            </Text>
-            <Text style={styles.configDetails}>
-              URL: {config.url}
-            </Text>
+            <Text style={styles.configDetails}>Version: {config.version}</Text>
+            <Text style={styles.configDetails}>URL: {config.url}</Text>
           </View>
         ))}
       </View>

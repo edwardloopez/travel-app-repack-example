@@ -53,33 +53,33 @@ const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-    <ScrollView style={styles.container}>
+      <ScrollView style={styles.container}>
+        <View style={styles.featuresContainer}>
+          {features.map((feature, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[styles.featureCard, { backgroundColor: feature.color }]}
+              onPress={() => navigation.navigate(feature.screen)}
+            >
+              <Text style={styles.featureIcon}>{feature.icon}</Text>
+              <Text style={styles.featureTitle}>{feature.title}</Text>
+              <Text style={styles.featureDescription}>
+                {feature.description}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <View style={styles.featuresContainer}>
-        {features.map((feature, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[styles.featureCard, { backgroundColor: feature.color }]}
-            onPress={() => navigation.navigate(feature.screen)}
-          >
-            <Text style={styles.featureIcon}>{feature.icon}</Text>
-            <Text style={styles.featureTitle}>{feature.title}</Text>
-            <Text style={styles.featureDescription}>{feature.description}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>🚀 Module Federation Demo</Text>
+          <Text style={styles.infoText}>
+            This app demonstrates Module Federation architecture. Each feature
+            above loads as a separate micro-frontend with remote bundles!
+          </Text>
+        </View>
 
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>🚀 Module Federation Demo</Text>
-        <Text style={styles.infoText}>
-          This app demonstrates Module Federation architecture. Each feature
-          above loads as a separate micro-frontend with remote bundles!
-        </Text>
-      </View>
-
-      <BundleCacheDebugScreen />
-    </ScrollView>
-    
+        <BundleCacheDebugScreen />
+      </ScrollView>
     </SafeAreaView>
   );
 };
