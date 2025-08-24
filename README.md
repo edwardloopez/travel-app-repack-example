@@ -1,6 +1,7 @@
 # 🌍 Travel App - Module Federation V2 Super App Architecture
 
-> A comprehensive React Native super app demonstrating **Module Federation V2** with **Re.Pack 5.x**, showcasing micro-frontend architecture patterns and advanced bundle management.
+> A comprehensive React Native super app demonstrating **Module Federation V2** with **Re.Pack
+> 5.x**, showcasing micro-frontend architecture patterns and advanced bundle management.
 
 ## 📋 Table of Contents
 
@@ -18,7 +19,8 @@
 
 ## 🏗️ Architecture Overview
 
-This project demonstrates a **Module Federation V2** super app architecture with the following micro-frontends:
+This project demonstrates a **Module Federation V2** super app architecture with the following
+micro-frontends:
 
 ```mermaid
 graph TB
@@ -26,13 +28,13 @@ graph TB
     Host --> Destinations[Destinations MF<br/>Port: 9001]
     Host --> Search[Search MF<br/>Port: 9002]
     Host --> Photos[Photos MF<br/>Port: 9003]
-    
+
     Host --> Core[travel-core<br/>Shared Package]
     Weather --> Core
     Destinations --> Core
     Search --> Core
     Photos --> Core
-    
+
     Host --> SDK[travel-sdk<br/>Dependency Manager]
 ```
 
@@ -52,6 +54,7 @@ graph TB
 ### 1. **The Manifest Magic**
 
 MF V2's manifest system (`mf-manifest.json`) provides:
+
 - Automatic remote discovery
 - Platform-specific resolution (`${platform}` interpolation)
 - Built-in version management
@@ -68,6 +71,7 @@ remotes: {
 ### 2. **Re.Pack 5.x + Rspack = Performance**
 
 The combination delivers:
+
 - **Fast builds** with Rspack's Rust-based bundling
 - **Hot reloading** across micro-frontends
 - **Tree shaking** for optimal bundle sizes
@@ -76,6 +80,7 @@ The combination delivers:
 ### 3. **ModuleFederationPluginV2 Features**
 
 The enhanced plugin provides:
+
 - **Manifest-based resolution**: No manual URL management
 - **Dynamic type hinting**: Better TypeScript integration
 - **Runtime plugin system**: Extensible architecture
@@ -87,22 +92,22 @@ The enhanced plugin provides:
 
 ### Essential Dependencies
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `@callstack/repack` | `^5.1.1` | React Native bundling with Module Federation |
-| `@module-federation/enhanced` | `^0.13.1` | Enhanced MF features |
-| `@rspack/core` | `^1.2.2` | Fast Rust-based bundler |
-| `@rnef/cli` | `^0.7.5` | React Native Enhanced Framework |
-| `@swc/helpers` | `0.5.15` | SWC transformation helpers |
-| `zephyr-repack-plugin` | `0.0.54` | Advanced Re.Pack optimizations |
+| Package                       | Version   | Purpose                                      |
+| ----------------------------- | --------- | -------------------------------------------- |
+| `@callstack/repack`           | `^5.1.1`  | React Native bundling with Module Federation |
+| `@module-federation/enhanced` | `^0.13.1` | Enhanced MF features                         |
+| `@rspack/core`                | `^1.2.2`  | Fast Rust-based bundler                      |
+| `@rnef/cli`                   | `^0.7.5`  | React Native Enhanced Framework              |
+| `@swc/helpers`                | `0.5.15`  | SWC transformation helpers                   |
+| `zephyr-repack-plugin`        | `0.0.54`  | Advanced Re.Pack optimizations               |
 
 ### Workspace Management
 
-| Tool | Purpose | Configuration |
-|------|---------|---------------|
-| **pnpm** | Package manager with workspace support | `pnpm-workspace.yaml` |
-| **nx** | Monorepo tooling and task orchestration | `nx.json` |
-| **mprocs** | Multi-process development server | `mprocs.yaml` |
+| Tool       | Purpose                                 | Configuration         |
+| ---------- | --------------------------------------- | --------------------- |
+| **pnpm**   | Package manager with workspace support  | `pnpm-workspace.yaml` |
+| **nx**     | Monorepo tooling and task orchestration | `nx.json`             |
+| **mprocs** | Multi-process development server        | `mprocs.yaml`         |
 
 ### React Native Stack
 
@@ -200,6 +205,7 @@ pnpm start
 ```
 
 This launches:
+
 - Host app on port 8081
 - Weather MF on port 9000
 - Destinations MF on port 9001
@@ -243,7 +249,7 @@ new Repack.plugins.ModuleFederationPluginV2({
     TravelPhotos: `TravelPhotos@http://localhost:9003/${platform}/mf-manifest.json`,
   },
   shared: getSharedDependencies({ eager: true }),
-})
+});
 ```
 
 ### 2. **Module Federation V2 Remote Configuration**
@@ -258,7 +264,7 @@ new Repack.plugins.ModuleFederationPluginV2({
     './WeatherScreen': './src/WeatherScreen',
   },
   shared: getSharedDependencies({ eager: false }),
-})
+});
 ```
 
 ### 3. **RNEF Configuration**
@@ -281,11 +287,11 @@ export default {
 // packages/travel-sdk/lib/sharedDeps.js
 const getSharedDependencies = ({ eager = true }) => {
   const dependencies = require('./dependencies.json');
-  
+
   const shared = Object.entries(dependencies).map(([dep, { version }]) => {
     return [dep, { singleton: true, eager, requiredVersion: version, version }];
   });
-  
+
   return Object.fromEntries(shared);
 };
 ```
@@ -331,6 +337,7 @@ procs:
 **Issue**: Remote manifests fail to load
 
 **Debug Steps**:
+
 ```bash
 # Check if manifest is accessible
 curl http://localhost:9000/android/mf-manifest.json
@@ -346,6 +353,7 @@ cat apps/travel-weather/dist/android/mf-manifest.json
 **Issue**: Multiple services trying to use the same port
 
 **Solution**: Check port allocation in package.json scripts:
+
 - Host: 8081
 - Weather: 9000
 - Destinations: 9001
@@ -357,10 +365,11 @@ cat apps/travel-weather/dist/android/mf-manifest.json
 **Issue**: Incorrect platform detection in manifest URLs
 
 **Solution**: Verify platform interpolation:
+
 ```javascript
 // Ensure ${platform} resolves correctly
 remotes: {
-  TravelWeather: `TravelWeather@http://localhost:9000/${platform}/mf-manifest.json`
+  TravelWeather: `TravelWeather@http://localhost:9000/${platform}/mf-manifest.json`;
 }
 ```
 
@@ -369,6 +378,7 @@ remotes: {
 **Issue**: Version conflicts between host and remotes
 
 **Solution**: Use centralized dependency management:
+
 ```json
 // packages/travel-sdk/lib/dependencies.json
 {
@@ -382,6 +392,7 @@ remotes: {
 **Issue**: Remote bundles fail to load
 
 **Debug Steps**:
+
 ```bash
 # Check manifest accessibility
 curl http://localhost:9000/android/mf-manifest.json
@@ -405,17 +416,17 @@ new Repack.plugins.HermesBytecodePlugin({
   enabled: mode === 'production',
   test: /\.(js)?bundle$/,
   exclude: /index.bundle$/,
-})
+});
 ```
 
 ### 2. **Shared Dependencies Strategy**
 
 ```javascript
 // Host: Eager loading for core dependencies
-shared: getSharedDependencies({ eager: true })
+shared: getSharedDependencies({ eager: true });
 
 // Remotes: Lazy loading for optimal startup
-shared: getSharedDependencies({ eager: false })
+shared: getSharedDependencies({ eager: false });
 ```
 
 ### 3. **Zephyr Plugin Integration**
@@ -441,21 +452,25 @@ export default USE_ZEPHYR ? withZephyr()(config) : config;
 ## 🎯 Best Practices
 
 ### 1. **Dependency Management**
+
 - Centralize shared dependencies in `travel-sdk`
 - Use exact versions for consistency
 - Regular dependency audits
 
 ### 2. **Development Workflow**
+
 - Use `mprocs` for orchestrated development
 - Enable hot reloading for fast iterations
 - Implement proper error boundaries
 
 ### 3. **Code Organization**
+
 - Keep micro-frontends loosely coupled
 - Share common UI through `travel-core`
 - Use TypeScript for type safety
 
 ### 4. **Performance**
+
 - Lazy load non-critical micro-frontends
 - Optimize bundle sizes with tree shaking
 - Use Hermes for production builds
