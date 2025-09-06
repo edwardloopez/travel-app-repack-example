@@ -14,8 +14,7 @@ export interface BundleVersion {
 export interface VersionedRemoteConfig {
   [remoteName: string]: {
     version: string;
-    url: string;
-    fallbackUrl?: string;
+    name: string;
   };
 }
 
@@ -26,42 +25,21 @@ export interface VersionedRemoteConfig {
 export const REMOTE_CONFIGS: VersionedRemoteConfig = {
   TravelWeather: {
     version: '1.0.0',
-    url: 'http://localhost:9000',
-    fallbackUrl: 'https://cdn.yourapp.com/travel-weather',
+    name: 'TravelWeather',
   },
   TravelDestinations: {
     version: '1.0.0',
-    url: 'http://localhost:9001',
-    fallbackUrl: 'https://cdn.yourapp.com/travel-destinations',
+    name: 'TravelDestinations',
   },
   TravelSearch: {
     version: '1.0.0',
-    url: 'http://localhost:9002',
-    fallbackUrl: 'https://cdn.yourapp.com/travel-search',
+    name: 'TravelSearch',
   },
   TravelPhotos: {
     version: '1.0.0',
-    url: 'http://localhost:9003',
-    fallbackUrl: 'https://cdn.yourapp.com/travel-photos',
+    name: 'TravelPhotos',
   },
 };
-
-/**
- * Generate versioned bundle URL
- */
-export function generateVersionedUrl(
-  remoteName: string,
-  platform: string,
-  config: VersionedRemoteConfig = REMOTE_CONFIGS
-): string {
-  const remoteConfig = config[remoteName];
-  if (!remoteConfig) {
-    throw new Error(`Remote config not found for: ${remoteName}`);
-  }
-
-  const { url, version } = remoteConfig;
-  return `${url}/${platform}/${remoteName}.container.js.bundle?v=${version}`;
-}
 
 /**
  * Generate versioned cache key
@@ -116,21 +94,4 @@ export async function loadRemoteConfig(): Promise<VersionedRemoteConfig> {
 export function extractVersionFromUrl(url: string): string | null {
   const match = url.match(/[?&]v=([^&]+)/);
   return match ? match[1] : null;
-}
-
-/**
- * Generate Module Federation remotes config with versioning
- */
-export function generateVersionedRemotes(
-  platform: string,
-  config: VersionedRemoteConfig = REMOTE_CONFIGS
-): Record<string, string> {
-  const remotes: Record<string, string> = {};
-
-  Object.keys(config).forEach(remoteName => {
-    const versionedUrl = generateVersionedUrl(remoteName, platform, config);
-    remotes[remoteName] = `${remoteName}@${versionedUrl}`;
-  });
-
-  return remotes;
 }

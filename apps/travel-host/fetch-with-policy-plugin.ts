@@ -15,13 +15,31 @@ export default function (): FederationRuntimePlugin {
     return {
       name: 'fetch-manifest-with-credentials-plugin',
       async fetch(url: string, options: RequestInit) {
+
+        const remotesConfig = await (
+            await import('../../packages/travel-core/src/utils/bundleVersioning')
+        ).loadRemoteConfig();
+
+        const manifestName = extractNameFromUrl(url);
+        const manifestVersion = extractVersionFromUrl(url);
+
         console.log('Development mode: Fetching without auth', {
           url,
           options,
+          manifestName,
+          manifestVersion,
         });
+
+        const AsyncStorage = (
+          await import('@react-native-async-storage/async-storage')
+        ).default;
+
+        
         const response = await fetch(url, {
-          ...options,
+            ...options,
         });
+
+
         return response;
       },
     };

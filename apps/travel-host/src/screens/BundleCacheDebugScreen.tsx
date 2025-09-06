@@ -117,7 +117,7 @@ const BundleCacheDebugScreen: React.FC = () => {
   const handlePreloadBundles = async () => {
     try {
       const remoteNames = Object.keys(remoteConfig);
-      await preloadBundles(remoteNames, 'ios', remoteConfig); // Using iOS as example
+      await preloadBundles(remoteNames, 'ios', remoteConfig);
 
       Alert.alert('Success', 'Bundles preloaded');
       await loadData();
@@ -217,7 +217,7 @@ const BundleCacheDebugScreen: React.FC = () => {
           <View key={name} style={styles.configItem}>
             <Text style={styles.configName}>{name}</Text>
             <Text style={styles.configDetails}>Version: {config.version}</Text>
-            <Text style={styles.configDetails}>URL: {config.url}</Text>
+            <Text style={styles.configDetails}>URL: {config.name}</Text>
           </View>
         ))}
       </View>
