@@ -14,21 +14,35 @@ const USE_ZEPHYR = Boolean(process.env.ZC);
  * TravelSearch App - Module Federation Remote Configuration
  */
 
-const config = env => {
-  const { mode, platform } = env;
+const config = Repack.defineRspackConfig(({ mode, platform }) => {
   return {
     mode,
     context: __dirname,
     entry: './index.js',
     resolve: {
       ...Repack.getResolveOptions(),
+      modules: [
+        'node_modules',
+        path.resolve(__dirname, 'node_modules'),
+        path.resolve(__dirname, '../../node_modules'),
+      ],
+      alias: {
+        '@babel/runtime': path.resolve(__dirname, 'node_modules/@babel/runtime'),
+      },
     },
     output: {
       uniqueName: 'travel-search',
     },
     module: {
       rules: [
-        ...Repack.getJsTransformRules(),
+        {
+          test: /\.[cm]?[jt]sx?$/,
+          use: {
+            loader: '@callstack/repack/babel-loader',
+            options: {},
+          },
+          type: 'javascript/auto',
+        },
         ...Repack.getAssetTransformRules(),
       ],
     },
@@ -53,6 +67,6 @@ const config = env => {
       }),
     ],
   };
-};
+});
 
 export default USE_ZEPHYR ? withZephyr()(config) : config;

@@ -15,6 +15,7 @@ export interface VersionedRemoteConfig {
   [remoteName: string]: {
     version: string;
     name: string;
+    url: string;
   };
 }
 
@@ -26,18 +27,22 @@ export const REMOTE_CONFIGS: VersionedRemoteConfig = {
   TravelWeather: {
     version: '1.0.0',
     name: 'TravelWeather',
+    url: 'http://localhost:9000',
   },
   TravelDestinations: {
     version: '1.0.0',
     name: 'TravelDestinations',
+    url: 'http://localhost:9001',
   },
   TravelSearch: {
     version: '1.0.0',
     name: 'TravelSearch',
+    url: 'http://localhost:9002',
   },
   TravelPhotos: {
     version: '1.0.0',
     name: 'TravelPhotos',
+    url: 'http://localhost:9003',
   },
 };
 

@@ -15,17 +15,23 @@ const __dirname = path.dirname(__filename);
  * Travel Host App - Module Federation Configuration
  */
 
-export default async env => {
-  const {
-    mode,
-    platform,
-    hostIpAddress = process.env.HOST_IP_ADDRESS || 'localhost',
-  } = env;
+export default Repack.defineRspackConfig(({ mode, platform }) => {
+  const hostIpAddress = process.env.HOST_IP_ADDRESS || 'localhost';
 
   return {
     mode,
     context: __dirname,
     entry: './index.ts',
+    devServer: {
+      proxy: [
+        {
+          context: ['/.expo/.virtual-metro-entry'],
+          target: `http://localhost:8081`,
+          pathRewrite: { '^/.expo/.virtual-metro-entry': '/index' },
+          changeOrigin: true,
+        },
+      ],
+    },
     resolve: {
       ...Repack.getResolveOptions(),
     },
@@ -34,7 +40,14 @@ export default async env => {
     },
     module: {
       rules: [
-        ...Repack.getJsTransformRules(),
+        {
+          test: /\.[cm]?[jt]sx?$/,
+          use: {
+            loader: '@callstack/repack/babel-swc-loader',
+            options: {},
+          },
+          type: 'javascript/auto',
+        },
         ...Repack.getAssetTransformRules(),
       ],
     },
@@ -56,11 +69,6 @@ export default async env => {
       new rspack.IgnorePlugin({
         resourceRegExp: /^@react-native-masked-view/,
       }),
-      new Repack.plugins.HermesBytecodePlugin({
-        enabled: mode === 'production',
-        test: /\.(js)?bundle$/,
-        exclude: /index.bundle$/,
-      }),
     ],
   };
-};
+});

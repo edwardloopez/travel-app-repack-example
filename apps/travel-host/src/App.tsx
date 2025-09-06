@@ -12,7 +12,7 @@ if (__DEV__) {
   };
 }
 
-const App: React.FC = () => {
+const App = () => {
   LogBox.ignoreAllLogs(true);
 
   LogBox.ignoreLogs([

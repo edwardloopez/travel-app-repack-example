@@ -3,19 +3,15 @@ import rspack from '@rspack/core';
 import { getSharedDependencies } from 'travel-sdk';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { withZephyr } from 'zephyr-repack-plugin';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const USE_ZEPHYR = Boolean(process.env.ZC);
 
 /**
  * TravelWeather App - Module Federation Remote Configuration
  */
 
-const config = env => {
-  const { mode, platform } = env;
+export default Repack.defineRspackConfig(({ mode, platform }) => {
   return {
     mode,
     context: __dirname,
@@ -28,7 +24,14 @@ const config = env => {
     },
     module: {
       rules: [
-        ...Repack.getJsTransformRules(),
+        {
+          test: /\.[cm]?[jt]sx?$/,
+          use: {
+            loader: '@callstack/repack/babel-swc-loader',
+            options: {},
+          },
+          type: 'javascript/auto',
+        },
         ...Repack.getAssetTransformRules(),
       ],
     },
@@ -53,6 +56,4 @@ const config = env => {
       }),
     ],
   };
-};
-
-export default USE_ZEPHYR ? withZephyr()(config) : config;
+});
