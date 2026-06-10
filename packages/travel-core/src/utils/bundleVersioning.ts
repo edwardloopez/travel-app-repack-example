@@ -4,6 +4,12 @@
 
 import { Platform } from 'react-native';
 import {
+  DEV_PORTS,
+  REMOTE_NAMES,
+  REMOTE_SLUGS,
+  REMOTE_VERSIONS,
+} from '../constants/remotesCatalog';
+import {
   getHostIp,
   getRemoteProfile,
   getStaticBaseUrl,
@@ -26,20 +32,6 @@ export interface VersionedRemoteConfig {
   };
 }
 
-const REMOTE_SLUGS: Record<string, string> = {
-  TravelWeather: 'weather',
-  TravelDestinations: 'destinations',
-  TravelSearch: 'search',
-  TravelPhotos: 'photos',
-};
-
-const DEV_PORTS: Record<string, number> = {
-  TravelWeather: 9000,
-  TravelDestinations: 9001,
-  TravelSearch: 9002,
-  TravelPhotos: 9003,
-};
-
 let activeRemoteConfig: VersionedRemoteConfig | null = null;
 
 function resolveRemoteBaseUrl(remoteName: string, profile = getRemoteProfile()) {
@@ -55,10 +47,10 @@ export function buildRemoteConfig(
 ): VersionedRemoteConfig {
   const profile = getRemoteProfile();
 
-  return Object.keys(REMOTE_SLUGS).reduce((acc, remoteName) => {
+  return REMOTE_NAMES.reduce((acc, remoteName) => {
     const baseUrl = resolveRemoteBaseUrl(remoteName, profile);
     acc[remoteName] = {
-      version: '1.0.0',
+      version: REMOTE_VERSIONS[remoteName],
       name: remoteName,
       url: baseUrl,
       manifestUrl: `${baseUrl}/${platform}/mf-manifest.json`,

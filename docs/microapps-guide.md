@@ -141,7 +141,7 @@ sequenceDiagram
 El host declara remotes en build time vía `createHostRspackConfig()` → `buildHostRemotes(profile, platform)` (`packages/travel-sdk/lib/remoteProfiles.mjs`):
 
 ```javascript
-// Perfil dev → :9000-9003 | static/external → REMOTE_STATIC_BASE_URL (:4100)
+// Perfil dev → :9000-9003 | static/external → localhost:4100 (constante en remoteDefaults)
 remotes: buildHostRemotes(undefined, platform),
 // Ejemplo static/ios:
 // TravelWeather@http://localhost:4100/weather/ios/mf-manifest.json
@@ -383,7 +383,7 @@ const config = await loadRemoteConfig();
 // → { TravelWeather: { version: '1.1.0', url, manifestUrl }, ... }
 ```
 
-**Importante:** la versión no se infiere del bundle; hay que subirla en el registry (`REMOTE_VERSIONS` / `remote-registry.json`). Sin bump de versión, el host puede reutilizar caché aunque el archivo en CDN cambió. `checkForUpdates()` solo corre **al abrir la app**, no en background.
+**Importante:** la versión no se infiere del bundle; hay que subirla en `packages/travel-sdk/lib/remotesCatalog.json` (y regenerar `remote-registry.json` con `pnpm generate:registry` o el script equivalente). Sin bump de versión, el host puede reutilizar caché aunque el archivo en CDN cambió. `checkForUpdates()` solo corre **al abrir la app**, no en background.
 
 ### 4.2 Runtime plugins (fetch y reintentos)
 
@@ -653,6 +653,7 @@ Antes de implementar micro-apps en producción, responde:
 | Archivo | Qué aprender |
 |---------|-------------|
 | `packages/travel-sdk/lib/createRspackConfig.mjs` | Factory rspack host/remotes + `buildHostRemotes` |
+| `packages/travel-sdk/lib/remotesCatalog.json` | Catálogo único: slug, devPort, version por remote |
 | `packages/travel-sdk/lib/remoteProfiles.mjs` | Perfiles dev/static/external y registry JSON |
 | `apps/travel-host/app.config.ts` | Config Expo (prebuild); `.env` para runtime |
 | `apps/travel-host/rspack.config.mjs` | Entry host + `dotenv` + plugins MF |
@@ -732,14 +733,16 @@ createLazyFederatedScreen()
 | `static` | `:4100` (CDN local) | `buildStaticRegistry()` en memoria | No — build-time |
 | `external` | No embebidas | `fetch(remote-registry.json)` | Sí — runtime |
 
-Variables en `apps/travel-host/.env` (fuente única para runtime + rspack):
+Variables MF en `apps/travel-host/.env` (ver `.env.example`):
 
 ```env
-HOST_IP_ADDRESS=localhost
 REMOTE_PROFILE=static
-REMOTE_STATIC_BASE_URL=http://localhost:4100
-REMOTE_REGISTRY_URL=http://localhost:4100/remote-registry.json
+# HOST_IP_ADDRESS=192.168.x.x   # opcional: dev + dispositivo físico
 ```
+
+URLs locales (`http://localhost:4100`, registry en `/remote-registry.json`) están hardcodeadas en `packages/travel-core/src/constants/remoteDefaults.ts` y `packages/travel-sdk/lib/remoteDefaults.mjs` — no van en `.env`.
+
+**Producción `external`:** URL del registry en `apps/travel-host/app.config.ts` → `extra.remoteRegistryUrl` (no en `.env`).
 
 **Dos capas de config:** rspack lee `.env` vía `dotenv`; runtime lee `react-native-config` + `process.env` inlineado (babel). Tras cambiar `.env`, reinicia el dev server; si `Config` nativo quedó viejo, haz `pnpm run:travel-host:ios`.
 
@@ -772,7 +775,9 @@ pnpm start:travel-host    # terminal 2
 pnpm run:travel-host:ios  # terminal 3
 
 # Simular repos separados (external)
-# .env → REMOTE_PROFILE=external + REMOTE_REGISTRY_URL
+# .env → REMOTE_PROFILE=external
+# Registry local: http://localhost:4100/remote-registry.json (default en código)
+# Prod: app.config.ts → extra.remoteRegistryUrl
 
 # Deshabilitar un remote sin rebuild del host
 # remote-registry.json → "enabled": false

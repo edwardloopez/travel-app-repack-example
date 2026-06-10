@@ -226,7 +226,7 @@ pnpm start:travel-weather
 
 ### 3. **Remote Profiles (POC)**
 
-Set `apps/travel-host/.env` (see `.env.example`):
+Set `apps/travel-host/.env` (see `.env.example`). MF needs only `REMOTE_PROFILE`; optional `HOST_IP_ADDRESS` for physical devices in dev. Local static URLs (`:4100`) are hardcoded in `remoteDefaults` — not in `.env`. Production external registry URL goes in `app.config.ts` → `extra.remoteRegistryUrl`.
 
 | Profile | Description |
 |---------|-------------|

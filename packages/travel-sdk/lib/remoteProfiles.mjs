@@ -1,23 +1,13 @@
-const REMOTE_SLUGS = {
-  TravelWeather: 'weather',
-  TravelDestinations: 'destinations',
-  TravelSearch: 'search',
-  TravelPhotos: 'photos',
-};
-
-const DEV_PORTS = {
-  TravelWeather: 9000,
-  TravelDestinations: 9001,
-  TravelSearch: 9002,
-  TravelPhotos: 9003,
-};
-
-const REMOTE_VERSIONS = {
-  TravelWeather: '1.0.0',
-  TravelDestinations: '1.0.0',
-  TravelSearch: '1.0.0',
-  TravelPhotos: '1.0.0',
-};
+import {
+  LOCAL_REGISTRY_URL,
+  LOCAL_STATIC_BASE_URL,
+} from './remoteDefaults.mjs';
+import {
+  DEV_PORTS,
+  REMOTE_NAMES,
+  REMOTE_SLUGS,
+  REMOTE_VERSIONS,
+} from './remotesCatalog.mjs';
 
 function getHostIp() {
   return process.env.HOST_IP_ADDRESS || 'localhost';
@@ -28,14 +18,11 @@ function getProfile() {
 }
 
 function getStaticBaseUrl() {
-  return process.env.REMOTE_STATIC_BASE_URL || 'http://localhost:4100';
+  return LOCAL_STATIC_BASE_URL;
 }
 
 function getRegistryUrl() {
-  return (
-    process.env.REMOTE_REGISTRY_URL ||
-    `${getStaticBaseUrl()}/remote-registry.json`
-  );
+  return LOCAL_REGISTRY_URL;
 }
 
 function resolveRemoteBaseUrl(remoteName, profile = getProfile()) {
@@ -54,7 +41,7 @@ function getManifestEntry(remoteName, platform, profile = getProfile()) {
 }
 
 function getRemoteConfigs(profile = getProfile()) {
-  return Object.keys(REMOTE_SLUGS).reduce((acc, remoteName) => {
+  return REMOTE_NAMES.reduce((acc, remoteName) => {
     acc[remoteName] = {
       version: REMOTE_VERSIONS[remoteName],
       name: remoteName,
@@ -67,7 +54,7 @@ function getRemoteConfigs(profile = getProfile()) {
 }
 
 function buildHostRemotes(profile = getProfile(), platform = 'ios') {
-  return Object.keys(REMOTE_SLUGS).reduce((acc, remoteName) => {
+  return REMOTE_NAMES.reduce((acc, remoteName) => {
     const baseUrl = resolveRemoteBaseUrl(remoteName, profile);
     acc[remoteName] = `${remoteName}@${baseUrl}/${platform}/mf-manifest.json`;
     return acc;
@@ -80,7 +67,7 @@ function buildRegistryJson(profile = getProfile()) {
   return {
     hostMinVersion: '1.0.0',
     profile,
-    remotes: Object.keys(REMOTE_SLUGS).map(remoteName => ({
+    remotes: REMOTE_NAMES.map(remoteName => ({
       name: remoteName,
       entry: `${baseUrl}/${REMOTE_SLUGS[remoteName]}/\${platform}/mf-manifest.json`,
       version: REMOTE_VERSIONS[remoteName],
@@ -96,6 +83,7 @@ export {
   REMOTE_SLUGS,
   DEV_PORTS,
   REMOTE_VERSIONS,
+  REMOTE_NAMES,
   getHostIp,
   getProfile,
   getStaticBaseUrl,

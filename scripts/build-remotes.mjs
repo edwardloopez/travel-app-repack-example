@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { REMOTE_SLUGS } from '../packages/travel-sdk/lib/remoteProfiles.mjs';
+import { REMOTE_SLUGS } from '../packages/travel-sdk/lib/remotesCatalog.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');

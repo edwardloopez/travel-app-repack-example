@@ -1,5 +1,12 @@
 import { Platform } from 'react-native';
-import { getConfigValue } from './appConfig';
+import {
+  DEV_PORTS,
+  REMOTE_NAMES,
+  REMOTE_SLUGS,
+  REMOTE_VERSIONS,
+} from '../constants/remotesCatalog';
+import { LOCAL_STATIC_BASE_URL } from '../constants/remoteDefaults';
+import { getConfigValue, getRemoteRegistryUrl } from './appConfig';
 
 export type RemoteProfile = 'dev' | 'static' | 'external';
 
@@ -57,27 +64,6 @@ export const FEATURE_METADATA: Record<
   },
 };
 
-const REMOTE_SLUGS: Record<string, string> = {
-  TravelWeather: 'weather',
-  TravelDestinations: 'destinations',
-  TravelSearch: 'search',
-  TravelPhotos: 'photos',
-};
-
-const DEV_PORTS: Record<string, number> = {
-  TravelWeather: 9000,
-  TravelDestinations: 9001,
-  TravelSearch: 9002,
-  TravelPhotos: 9003,
-};
-
-const REMOTE_VERSIONS: Record<string, string> = {
-  TravelWeather: '1.0.0',
-  TravelDestinations: '1.0.0',
-  TravelSearch: '1.0.0',
-  TravelPhotos: '1.0.0',
-};
-
 export function getRemoteProfile(): RemoteProfile {
   const profile = getConfigValue('REMOTE_PROFILE') || 'dev';
   if (profile === 'static' || profile === 'external') {
@@ -91,13 +77,11 @@ export function getHostIp(): string {
 }
 
 export function getStaticBaseUrl(): string {
-  return getConfigValue('REMOTE_STATIC_BASE_URL') || 'http://localhost:4100';
+  return LOCAL_STATIC_BASE_URL;
 }
 
 export function getRegistryUrl(): string {
-  return (
-    getConfigValue('REMOTE_REGISTRY_URL') || `${getStaticBaseUrl()}/remote-registry.json`
-  );
+  return getRemoteRegistryUrl();
 }
 
 export function resolveTemplate(
@@ -115,7 +99,7 @@ function buildDevRegistry(platform: string): RemoteRegistry {
   return {
     hostMinVersion: '1.0.0',
     profile: 'dev',
-    remotes: Object.keys(REMOTE_SLUGS).map(name => ({
+    remotes: REMOTE_NAMES.map(name => ({
       name,
       entry: `http://${host}:${DEV_PORTS[name]}/${platform}/mf-manifest.json`,
       version: REMOTE_VERSIONS[name],
@@ -132,7 +116,7 @@ function buildStaticRegistry(platform: string): RemoteRegistry {
   return {
     hostMinVersion: '1.0.0',
     profile: 'static',
-    remotes: Object.keys(REMOTE_SLUGS).map(name => ({
+    remotes: REMOTE_NAMES.map(name => ({
       name,
       entry: `${baseUrl}/${REMOTE_SLUGS[name]}/${platform}/mf-manifest.json`,
       version: REMOTE_VERSIONS[name],

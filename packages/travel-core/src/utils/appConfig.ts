@@ -1,16 +1,11 @@
+import { LOCAL_REGISTRY_URL } from '../constants/remoteDefaults';
+
 type AppConfig = {
   REMOTE_PROFILE?: string;
   HOST_IP_ADDRESS?: string;
-  REMOTE_STATIC_BASE_URL?: string;
-  REMOTE_REGISTRY_URL?: string;
 };
 
-const CONFIG_KEYS: (keyof AppConfig)[] = [
-  'REMOTE_PROFILE',
-  'HOST_IP_ADDRESS',
-  'REMOTE_STATIC_BASE_URL',
-  'REMOTE_REGISTRY_URL',
-];
+const CONFIG_KEYS: (keyof AppConfig)[] = ['REMOTE_PROFILE', 'HOST_IP_ADDRESS'];
 
 function readNativeConfig(): AppConfig {
   try {
@@ -43,4 +38,22 @@ export function getAppConfig(): AppConfig {
     }
     return config;
   }, {} as AppConfig);
+}
+
+/** Registry URL for external profile: expo.extra first, then local default. */
+export function getRemoteRegistryUrl(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Constants = require('expo-constants').default as {
+      expoConfig?: { extra?: { remoteRegistryUrl?: string } };
+    };
+    const fromExtra = Constants.expoConfig?.extra?.remoteRegistryUrl;
+    if (fromExtra) {
+      return fromExtra;
+    }
+  } catch {
+    // expo-constants not available (e.g. remote standalone)
+  }
+
+  return LOCAL_REGISTRY_URL;
 }

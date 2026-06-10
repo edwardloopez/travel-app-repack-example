@@ -1,0 +1,22 @@
+{
+  "TravelWeather": {
+    "slug": "weather",
+    "devPort": 9000,
+    "version": "1.0.0"
+  },
+  "TravelDestinations": {
+    "slug": "destinations",
+    "devPort": 9001,
+    "version": "1.0.0"
+  },
+  "TravelSearch": {
+    "slug": "search",
+    "devPort": 9002,
+    "version": "1.0.0"
+  },
+  "TravelPhotos": {
+    "slug": "photos",
+    "devPort": 9003,
+    "version": "1.0.0"
+  }
+}

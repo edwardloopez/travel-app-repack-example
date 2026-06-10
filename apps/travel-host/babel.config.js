@@ -12,12 +12,7 @@ module.exports = {
     [
       'transform-inline-environment-variables',
       {
-        include: [
-          'REMOTE_PROFILE',
-          'REMOTE_STATIC_BASE_URL',
-          'REMOTE_REGISTRY_URL',
-          'HOST_IP_ADDRESS',
-        ],
+        include: ['REMOTE_PROFILE', 'HOST_IP_ADDRESS'],
       },
     ],
   ],

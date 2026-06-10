@@ -32,4 +32,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: './assets/favicon.png',
   },
   plugins: [],
+  extra: {
+    // Production external profile: set the CDN registry URL here.
+    // remoteRegistryUrl: 'https://cdn.tuempresa.com/remote-registry.json',
+  },
 });
