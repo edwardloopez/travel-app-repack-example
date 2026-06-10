@@ -3,12 +3,7 @@
  */
 
 import { Platform } from 'react-native';
-import {
-  DEV_PORTS,
-  REMOTE_NAMES,
-  REMOTE_SLUGS,
-  REMOTE_VERSIONS,
-} from '../constants/remotesCatalog';
+import { REMOTE_NAMES, REMOTES_CATALOG } from '../constants/remotesCatalog';
 import {
   getHostIp,
   getRemoteProfile,
@@ -36,10 +31,10 @@ let activeRemoteConfig: VersionedRemoteConfig | null = null;
 
 function resolveRemoteBaseUrl(remoteName: string, profile = getRemoteProfile()) {
   if (profile === 'static' || profile === 'external') {
-    return `${getStaticBaseUrl()}/${REMOTE_SLUGS[remoteName]}`;
+    return `${getStaticBaseUrl()}/${REMOTES_CATALOG[remoteName].slug}`;
   }
 
-  return `http://${getHostIp()}:${DEV_PORTS[remoteName]}`;
+  return `http://${getHostIp()}:${REMOTES_CATALOG[remoteName].devPort}`;
 }
 
 export function buildRemoteConfig(
@@ -50,7 +45,7 @@ export function buildRemoteConfig(
   return REMOTE_NAMES.reduce((acc, remoteName) => {
     const baseUrl = resolveRemoteBaseUrl(remoteName, profile);
     acc[remoteName] = {
-      version: REMOTE_VERSIONS[remoteName],
+      version: REMOTES_CATALOG[remoteName].version,
       name: remoteName,
       url: baseUrl,
       manifestUrl: `${baseUrl}/${platform}/mf-manifest.json`,

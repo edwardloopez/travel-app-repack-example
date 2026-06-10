@@ -1,10 +1,5 @@
 import { Platform } from 'react-native';
-import {
-  DEV_PORTS,
-  REMOTE_NAMES,
-  REMOTE_SLUGS,
-  REMOTE_VERSIONS,
-} from '../constants/remotesCatalog';
+import { REMOTE_NAMES, REMOTES_CATALOG } from '../constants/remotesCatalog';
 import { LOCAL_STATIC_BASE_URL } from '../constants/remoteDefaults';
 import { getConfigValue, getRemoteRegistryUrl } from './appConfig';
 
@@ -101,11 +96,11 @@ function buildDevRegistry(platform: string): RemoteRegistry {
     profile: 'dev',
     remotes: REMOTE_NAMES.map(name => ({
       name,
-      entry: `http://${host}:${DEV_PORTS[name]}/${platform}/mf-manifest.json`,
-      version: REMOTE_VERSIONS[name],
+      entry: `http://${host}:${REMOTES_CATALOG[name].devPort}/${platform}/mf-manifest.json`,
+      version: REMOTES_CATALOG[name].version,
       enabled: true,
       ...FEATURE_METADATA[name],
-      startCommand: `pnpm start:travel-${REMOTE_SLUGS[name]}`,
+      startCommand: `pnpm start:travel-${REMOTES_CATALOG[name].slug}`,
     })),
   };
 }
@@ -118,8 +113,8 @@ function buildStaticRegistry(platform: string): RemoteRegistry {
     profile: 'static',
     remotes: REMOTE_NAMES.map(name => ({
       name,
-      entry: `${baseUrl}/${REMOTE_SLUGS[name]}/${platform}/mf-manifest.json`,
-      version: REMOTE_VERSIONS[name],
+      entry: `${baseUrl}/${REMOTES_CATALOG[name].slug}/${platform}/mf-manifest.json`,
+      version: REMOTES_CATALOG[name].version,
       enabled: true,
       ...FEATURE_METADATA[name],
       startCommand: `pnpm serve:remotes`,

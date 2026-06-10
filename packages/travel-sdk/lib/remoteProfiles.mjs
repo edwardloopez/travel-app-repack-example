@@ -2,12 +2,7 @@ import {
   LOCAL_REGISTRY_URL,
   LOCAL_STATIC_BASE_URL,
 } from './remoteDefaults.mjs';
-import {
-  DEV_PORTS,
-  REMOTE_NAMES,
-  REMOTE_SLUGS,
-  REMOTE_VERSIONS,
-} from './remotesCatalog.mjs';
+import { REMOTE_NAMES, REMOTES_CATALOG } from './remotesCatalog.mjs';
 
 function getHostIp() {
   return process.env.HOST_IP_ADDRESS || 'localhost';
@@ -26,13 +21,12 @@ function getRegistryUrl() {
 }
 
 function resolveRemoteBaseUrl(remoteName, profile = getProfile()) {
+  const entry = REMOTES_CATALOG[remoteName];
   if (profile === 'static' || profile === 'external') {
-    const slug = REMOTE_SLUGS[remoteName];
-    return `${getStaticBaseUrl()}/${slug}`;
+    return `${getStaticBaseUrl()}/${entry.slug}`;
   }
 
-  const port = DEV_PORTS[remoteName];
-  return `http://${getHostIp()}:${port}`;
+  return `http://${getHostIp()}:${entry.devPort}`;
 }
 
 function getManifestEntry(remoteName, platform, profile = getProfile()) {
@@ -42,12 +36,13 @@ function getManifestEntry(remoteName, platform, profile = getProfile()) {
 
 function getRemoteConfigs(profile = getProfile()) {
   return REMOTE_NAMES.reduce((acc, remoteName) => {
+    const entry = REMOTES_CATALOG[remoteName];
     acc[remoteName] = {
-      version: REMOTE_VERSIONS[remoteName],
+      version: entry.version,
       name: remoteName,
       url: resolveRemoteBaseUrl(remoteName, profile),
-      slug: REMOTE_SLUGS[remoteName],
-      port: DEV_PORTS[remoteName],
+      slug: entry.slug,
+      port: entry.devPort,
     };
     return acc;
   }, {});
@@ -67,22 +62,23 @@ function buildRegistryJson(profile = getProfile()) {
   return {
     hostMinVersion: '1.0.0',
     profile,
-    remotes: REMOTE_NAMES.map(remoteName => ({
-      name: remoteName,
-      entry: `${baseUrl}/${REMOTE_SLUGS[remoteName]}/\${platform}/mf-manifest.json`,
-      version: REMOTE_VERSIONS[remoteName],
-      enabled: true,
-      exposes: [`./${remoteName.replace('Travel', '')}Screen`],
-      screen: remoteName.replace('Travel', ''),
-      startCommand: `pnpm start:travel-${REMOTE_SLUGS[remoteName]}`,
-    })),
+    remotes: REMOTE_NAMES.map(remoteName => {
+      const entry = REMOTES_CATALOG[remoteName];
+      return {
+        name: remoteName,
+        entry: `${baseUrl}/${entry.slug}/\${platform}/mf-manifest.json`,
+        version: entry.version,
+        enabled: true,
+        exposes: [`./${remoteName.replace('Travel', '')}Screen`],
+        screen: remoteName.replace('Travel', ''),
+        startCommand: `pnpm start:travel-${entry.slug}`,
+      };
+    }),
   };
 }
 
 export {
-  REMOTE_SLUGS,
-  DEV_PORTS,
-  REMOTE_VERSIONS,
+  REMOTES_CATALOG,
   REMOTE_NAMES,
   getHostIp,
   getProfile,
