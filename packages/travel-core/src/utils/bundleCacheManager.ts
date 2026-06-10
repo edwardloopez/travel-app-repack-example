@@ -6,6 +6,7 @@ import {
   getContainerUrl,
   type VersionedRemoteConfig,
 } from '../utils/bundleVersioning';
+import { retryWithBackoff } from '../utils/retryWithBackoff';
 
 /**
  * Bundle Cache Management Utilities
@@ -208,8 +209,9 @@ export class BundleCacheManager {
         try {
           const bundleUrl = getContainerUrl(remoteName, platform);
           const startedAt = Date.now();
-          // Use the MF container name so Repack's resolver-plugin can map the URL.
-          await ScriptManager.shared.prefetchScript(remoteName);
+          await retryWithBackoff(() =>
+            ScriptManager.shared.prefetchScript(remoteName)
+          );
           console.log(
             `BundleCache: Preloaded ${remoteName} in ${Date.now() - startedAt}ms from ${bundleUrl}`
           );

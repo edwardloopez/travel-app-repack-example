@@ -21,12 +21,13 @@ const MainNavigator: React.FC = () => {
     <Stack.Navigator
       initialRouteName="Home"
       screenOptions={{
-        headerTitle: '',
+        headerTintColor: '#fff',
+        headerBackButtonDisplayMode: 'minimal',
         headerStyle: {
           backgroundColor: '#2196F3',
         },
       }}
-    >
+      >
       <Stack.Screen
         name="Home"
         component={HomeScreen}

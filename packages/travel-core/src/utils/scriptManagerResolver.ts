@@ -4,6 +4,19 @@ import { getActiveRemoteConfig, getContainerUrl } from './bundleVersioning';
 
 let installed = false;
 
+const SCRIPT_FETCH_OPTIONS = {
+  cache: !__DEV__,
+  retry: 3,
+  retryDelay: 1000,
+} as const;
+
+function remoteScriptLocator(url: string) {
+  return {
+    url: Script.getRemoteURL(url, { excludeExtension: true }),
+    ...SCRIPT_FETCH_OPTIONS,
+  };
+}
+
 /**
  * Fallback resolver when RepackResolverPlugin lacks referenceUrl
  * (e.g. prefetch by container name or chunk loads after manifest fetch).
@@ -25,34 +38,22 @@ export function setupTravelScriptResolver() {
 
       if (typeof scriptId === 'string' && scriptId in config) {
         const containerUrl = getContainerUrl(scriptId, platform);
-        return {
-          url: Script.getRemoteURL(containerUrl, { excludeExtension: true }),
-          cache: !__DEV__,
-        };
+        return remoteScriptLocator(containerUrl);
       }
 
       if (caller && caller in config) {
         if (typeof scriptId === 'string' && /^https?:\/\//.test(scriptId)) {
-          return {
-            url: Script.getRemoteURL(scriptId, { excludeExtension: true }),
-            cache: !__DEV__,
-          };
+          return remoteScriptLocator(scriptId);
         }
 
         const containerUrl = getContainerUrl(caller, platform);
         if (scriptId === caller) {
-          return {
-            url: Script.getRemoteURL(containerUrl, { excludeExtension: true }),
-            cache: !__DEV__,
-          };
+          return remoteScriptLocator(containerUrl);
         }
 
         const baseUrl = containerUrl.replace(/\/[^/]+$/, '');
         const chunkUrl = `${baseUrl}/${scriptId}`;
-        return {
-          url: Script.getRemoteURL(chunkUrl, { excludeExtension: true }),
-          cache: !__DEV__,
-        };
+        return remoteScriptLocator(chunkUrl);
       }
 
       return undefined;
