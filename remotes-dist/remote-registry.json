@@ -1,0 +1,50 @@
+{
+  "hostMinVersion": "1.0.0",
+  "profile": "static",
+  "remotes": [
+    {
+      "name": "TravelWeather",
+      "entry": "http://localhost:4100/weather/${platform}/mf-manifest.json",
+      "version": "1.0.0",
+      "enabled": true,
+      "exposes": [
+        "./WeatherScreen"
+      ],
+      "screen": "Weather",
+      "startCommand": "pnpm start:travel-weather"
+    },
+    {
+      "name": "TravelDestinations",
+      "entry": "http://localhost:4100/destinations/${platform}/mf-manifest.json",
+      "version": "1.0.0",
+      "enabled": true,
+      "exposes": [
+        "./DestinationsScreen"
+      ],
+      "screen": "Destinations",
+      "startCommand": "pnpm start:travel-destinations"
+    },
+    {
+      "name": "TravelSearch",
+      "entry": "http://localhost:4100/search/${platform}/mf-manifest.json",
+      "version": "1.0.0",
+      "enabled": true,
+      "exposes": [
+        "./SearchScreen"
+      ],
+      "screen": "Search",
+      "startCommand": "pnpm start:travel-search"
+    },
+    {
+      "name": "TravelPhotos",
+      "entry": "http://localhost:4100/photos/${platform}/mf-manifest.json",
+      "version": "1.0.0",
+      "enabled": true,
+      "exposes": [
+        "./PhotosScreen"
+      ],
+      "screen": "Photos",
+      "startCommand": "pnpm start:travel-photos"
+    }
+  ]
+}

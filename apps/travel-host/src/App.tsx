@@ -2,7 +2,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import React from 'react';
 import { LogBox, StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider, TravelProvider } from 'travel-core';
+import {
+  BundleCacheProvider,
+  RemoteRegistryProvider,
+  ThemeProvider,
+  TravelProvider,
+} from 'travel-core';
+import RemoteBootstrapGate from './components/RemoteBootstrapGate';
 import MainNavigator from './navigation/MainNavigator';
 
 if (__DEV__) {
@@ -24,16 +30,22 @@ const App = () => {
   ]);
 
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="light-content" />
-      <ThemeProvider>
-        <TravelProvider>
-          <NavigationContainer>
-            <MainNavigator />
-          </NavigationContainer>
-        </TravelProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <BundleCacheProvider>
+      <RemoteRegistryProvider>
+        <SafeAreaProvider>
+          <StatusBar barStyle="light-content" />
+          <ThemeProvider>
+            <TravelProvider>
+              <RemoteBootstrapGate>
+                <NavigationContainer>
+                  <MainNavigator />
+                </NavigationContainer>
+              </RemoteBootstrapGate>
+            </TravelProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </RemoteRegistryProvider>
+    </BundleCacheProvider>
   );
 };
 

@@ -94,12 +94,10 @@ The enhanced plugin provides:
 
 | Package                       | Version   | Purpose                                      |
 | ----------------------------- | --------- | -------------------------------------------- |
-| `@callstack/repack`           | `^5.1.1`  | React Native bundling with Module Federation |
-| `@module-federation/enhanced` | `^0.13.1` | Enhanced MF features                         |
-| `@rspack/core`                | `^1.2.2`  | Fast Rust-based bundler                      |
-| `@rnef/cli`                   | `^0.7.5`  | React Native Enhanced Framework              |
+| `@callstack/repack`           | `5.2.0`   | React Native bundling with Module Federation |
+| `@module-federation/enhanced` | `0.13.1`  | Enhanced MF features                         |
+| `@rspack/core`                | `^1.4.0`  | Fast Rust-based bundler                      |
 | `@swc/helpers`                | `0.5.15`  | SWC transformation helpers                   |
-| `zephyr-repack-plugin`        | `0.0.54`  | Advanced Re.Pack optimizations               |
 
 ### Workspace Management
 
@@ -111,9 +109,9 @@ The enhanced plugin provides:
 
 ### React Native Stack
 
-- **React Native**: `0.79.5` (New Architecture/Fabric)
-- **React**: `19.0.0`
-- **Expo**: `~53.0.20`
+- **React Native**: `0.80.2`
+- **React**: `19.1.0`
+- **Expo**: `~53.0.22`
 - **Node.js**: `>=22` (engineStrict)
 
 ---
@@ -124,9 +122,8 @@ The enhanced plugin provides:
 travel-app-repack-example/
 ├── 📱 apps/                          # Micro-frontend applications
 │   ├── travel-host/                  # Main host app (Port: 8081)
-│   │   ├── rspack.config.mjs         # MF V2 host configuration
-│   │   ├── rnef.config.mjs           # RNEF platform setup
-│   │   └── src/navigation/           # App navigation
+│   │   ├── rspack.config.mjs         # MF V2 host (runtime remotes)
+│   │   └── src/federation/           # Dynamic remote registration
 │   ├── travel-weather/               # Weather MF (Port: 9000)
 │   ├── travel-destinations/          # Destinations MF (Port: 9001)
 │   ├── travel-search/               # Search MF (Port: 9002)
@@ -139,6 +136,8 @@ travel-app-repack-example/
 │   └── travel-sdk/                   # Dependency management SDK
 │       ├── lib/dependencies.json    # Centralized dependency versions
 │       └── lib/sharedDeps.js        # MF shared dependencies factory
+├── remotes-dist/                    # Pre-built remote bundles + registry
+├── scripts/                         # build-remotes, serve-remotes
 ├── ⚙️ Configuration Files
 │   ├── nx.json                      # Nx workspace configuration
 │   ├── mprocs.yaml                  # Multi-process dev setup
@@ -222,7 +221,29 @@ pnpm start:travel-host
 pnpm start:travel-weather
 ```
 
-### 3. **Standalone Mode**
+### 3. **Remote Profiles (POC)**
+
+Set `apps/travel-host/.env` (see `.env.example`):
+
+| Profile | Description |
+|---------|-------------|
+| `dev` | Live bundlers on ports 9000-9003 (default) |
+| `static` | Pre-built bundles served from `remotes-dist/` |
+| `external` | Registry-only mode simulating separate repos |
+
+```bash
+# Static CDN simulation
+pnpm build:remotes:ios   # or :android
+pnpm serve:remotes       # terminal 1 — :4100
+# apps/travel-host/.env → REMOTE_PROFILE=static
+pnpm start:travel-host   # terminal 2
+pnpm run:travel-host:ios # terminal 3
+
+# External repo simulation (.env → REMOTE_PROFILE=external)
+pnpm start:travel-host
+```
+
+### 4. **Standalone Mode**
 
 Each micro-frontend can run independently:
 
@@ -237,19 +258,17 @@ pnpm start:standalone:travel-weather
 ### 1. **Module Federation V2 Host Configuration**
 
 ```javascript
-// apps/travel-host/rspack.config.mjs
+// apps/travel-host/rspack.config.mjs — remotes registered at runtime
 new Repack.plugins.ModuleFederationPluginV2({
   name: 'TravelHost',
   dts: false,
-  remotes: {
-    // Platform-specific manifest URLs
-    TravelWeather: `TravelWeather@http://localhost:9000/${platform}/mf-manifest.json`,
-    TravelDestinations: `TravelDestinations@http://localhost:9001/${platform}/mf-manifest.json`,
-    TravelSearch: `TravelSearch@http://localhost:9002/${platform}/mf-manifest.json`,
-    TravelPhotos: `TravelPhotos@http://localhost:9003/${platform}/mf-manifest.json`,
-  },
+  remotes: {},
   shared: getSharedDependencies({ eager: true }),
+  runtimePlugins: ['./fetch-with-policy-plugin.ts'],
 });
+
+// apps/travel-host/src/federation/initRemotes.ts
+registerRemotes(registry.remotes); // from remote-registry.json or dev config
 ```
 
 ### 2. **Module Federation V2 Remote Configuration**
@@ -429,15 +448,7 @@ shared: getSharedDependencies({ eager: true });
 shared: getSharedDependencies({ eager: false });
 ```
 
-### 3. **Zephyr Plugin Integration**
-
-```javascript
-// Optional: Advanced optimizations
-const USE_ZEPHYR = Boolean(process.env.ZC);
-export default USE_ZEPHYR ? withZephyr()(config) : config;
-```
-
-### 4. **Build Caching**
+### 3. **Build Caching**
 
 ```json
 // nx.json - Enable build caching

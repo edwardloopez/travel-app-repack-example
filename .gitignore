@@ -3,6 +3,7 @@
 # Dependencies
 node_modules/
 **/node_modules/
+.pnpm-store/
 .pnp
 .pnp.js
 
@@ -118,6 +119,11 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 .tsbuildinfo
+# Accidental tsc output next to sources (all packages use noEmit now)
+packages/travel-core/src/**/*.js
+apps/**/src/**/*.js
+apps/travel-host/fetch-with-policy-plugin.js
+apps/travel-host/index.js
 
 # Temporary folders
 tmp/
@@ -190,6 +196,11 @@ webpack-stats.json
 # Module Federation
 **/federation-stats.json
 **/module-federation-manifest.json
+
+# Pre-built remote bundles (pnpm build:remotes:*)
+# Keep remote-registry.json as the deployable catalog contract.
+remotes-dist/*
+!remotes-dist/remote-registry.json
 
 # Flipper
 **/.flipper/

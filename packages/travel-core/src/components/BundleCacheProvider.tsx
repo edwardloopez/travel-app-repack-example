@@ -2,10 +2,14 @@ import React, { useEffect } from 'react';
 import { ScriptManager } from '@callstack/repack/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  extractPlatformFromUrl,
+  extractRemoteNameFromUrl,
   extractVersionFromUrl,
   generateVersionedCacheKey,
+  getRemoteVersion,
   isVersionCompatible,
 } from '../utils/bundleVersioning';
+import { setupTravelScriptResolver } from '../utils/scriptManagerResolver';
 
 interface BundleCacheProviderProps {
   children: React.ReactNode;
@@ -22,10 +26,9 @@ class VersionedBundleStorage {
   async getItem(key: string): Promise<string | null> {
     try {
       // Extract version from the key/URL if available
-      const version = extractVersionFromUrl(key);
+      const version = this.resolveVersion(key);
 
       if (version) {
-        // Use versioned cache key
         const versionedKey = generateVersionedCacheKey(
           this.extractRemoteName(key),
           this.extractPlatform(key),
@@ -68,7 +71,7 @@ class VersionedBundleStorage {
 
   async setItem(key: string, value: string): Promise<void> {
     try {
-      const version = extractVersionFromUrl(key);
+      const version = this.resolveVersion(key);
 
       if (version) {
         const versionedKey = generateVersionedCacheKey(
@@ -99,7 +102,7 @@ class VersionedBundleStorage {
 
   async removeItem(key: string): Promise<void> {
     try {
-      const version = extractVersionFromUrl(key);
+      const version = this.resolveVersion(key);
 
       if (version) {
         const versionedKey = generateVersionedCacheKey(
@@ -125,13 +128,25 @@ class VersionedBundleStorage {
   }
 
   private extractRemoteName(key: string): string {
-    const match = key.match(/\/([^\/]+)\.container\.js\.bundle/);
-    return match ? match[1] : 'unknown';
+    return extractRemoteNameFromUrl(key) || 'unknown';
   }
 
   private extractPlatform(key: string): string {
-    const match = key.match(/\/(ios|android)\//);
-    return match ? match[1] : 'unknown';
+    return extractPlatformFromUrl(key);
+  }
+
+  private resolveVersion(key: string): string | null {
+    const fromUrl = extractVersionFromUrl(key);
+    if (fromUrl) {
+      return fromUrl;
+    }
+
+    const remoteName = this.extractRemoteName(key);
+    if (remoteName !== 'unknown') {
+      return getRemoteVersion(remoteName);
+    }
+
+    return null;
   }
 
   /**
@@ -206,6 +221,7 @@ const BundleCacheProvider: React.FC<BundleCacheProviderProps> = ({
   children,
 }) => {
   useEffect(() => {
+    setupTravelScriptResolver();
     const versionedStorage = new VersionedBundleStorage();
 
     ScriptManager.shared.setStorage({
@@ -220,23 +236,6 @@ const BundleCacheProvider: React.FC<BundleCacheProviderProps> = ({
     );
 
     versionedStorage.cleanupOldVersions(3);
-
-    // Optional: Add event listeners for debugging cache behavior
-    if (__DEV__) {
-      ScriptManager.shared.on('loaded', script => {
-        console.log(`BundleCache: Script loaded - ${script.scriptId}`);
-      });
-
-      ScriptManager.shared.on('error', error => {
-        console.warn('BundleCache: Script loading error:', error);
-      });
-
-      ScriptManager.shared.on('resolved', script => {
-        console.log(
-          `BundleCache: Script resolved - ${script.scriptId} -> ${script.locator?.url}`
-        );
-      });
-    }
   }, []);
 
   return <>{children}</>;

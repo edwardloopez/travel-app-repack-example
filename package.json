@@ -28,6 +28,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "adbreverse": "nx run-many -t adbreverse",
+    "build:remotes:android": "node scripts/build-remotes.mjs android && node scripts/generate-registry.mjs",
+    "build:remotes:ios": "node scripts/build-remotes.mjs ios && node scripts/generate-registry.mjs",
+    "serve:remotes": "node scripts/serve-remotes.mjs",
     "align-deps": "pnpm -r align-deps",
     "check-deps": "pnpm -r check-deps"
   },

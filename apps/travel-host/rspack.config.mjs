@@ -1,74 +1,15 @@
-import * as Repack from '@callstack/repack';
 import { ExpoModulesPlugin } from '@callstack/repack-plugin-expo-modules';
-import rspack from '@rspack/core';
+import { createHostRspackConfig } from 'travel-sdk/lib/createRspackConfig.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getSharedDependencies } from 'travel-sdk';
 import * as dotenv from 'dotenv';
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-/**
- * Travel Host App - Module Federation Configuration
- */
-
-export default Repack.defineRspackConfig(({ mode, platform }) => {
-  const hostIpAddress = process.env.HOST_IP_ADDRESS || 'localhost';
-
-  return {
-    mode,
-    context: __dirname,
-    entry: './index.ts',
-    devServer: {
-      proxy: [
-        {
-          context: ['/.expo/.virtual-metro-entry'],
-          target: `http://localhost:8081`,
-          pathRewrite: { '^/.expo/.virtual-metro-entry': '/index' },
-          changeOrigin: true,
-        },
-      ],
-    },
-    resolve: {
-      ...Repack.getResolveOptions(),
-    },
-    output: {
-      uniqueName: 'travel-host',
-    },
-    module: {
-      rules: [
-        {
-          test: /\.[cm]?[jt]sx?$/,
-          use: {
-            loader: '@callstack/repack/babel-swc-loader',
-            options: {},
-          },
-          type: 'javascript/auto',
-        },
-        ...Repack.getAssetTransformRules(),
-      ],
-    },
-    plugins: [
-      new Repack.RepackPlugin(),
-      new ExpoModulesPlugin(),
-      new Repack.plugins.ModuleFederationPluginV2({
-        name: 'TravelHost',
-        dts: false,
-        remotes: {
-          TravelWeather: `TravelWeather@http://${hostIpAddress}:9000/${platform}/mf-manifest.json`,
-          TravelDestinations: `TravelDestinations@http://${hostIpAddress}:9001/${platform}/mf-manifest.json`,
-          TravelSearch: `TravelSearch@http://${hostIpAddress}:9002/${platform}/mf-manifest.json`,
-          TravelPhotos: `TravelPhotos@http://${hostIpAddress}:9003/${platform}/mf-manifest.json`,
-        },
-        shared: getSharedDependencies({ eager: true }),
-        runtimePlugins: ['./fetch-with-policy-plugin.ts'],
-      }),
-      new rspack.IgnorePlugin({
-        resourceRegExp: /^@react-native-masked-view/,
-      }),
-    ],
-  };
+export default createHostRspackConfig({
+  dirname: __dirname,
+  entry: './index.ts',
+  runtimePlugins: ['./fetch-with-policy-plugin.ts'],
+  extraPlugins: [new ExpoModulesPlugin()],
 });

@@ -8,7 +8,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { LoadingSpinner, createAPIClient } from 'travel-core';
+import { LoadingSpinner, createAPIClient, useTravelContext } from 'travel-core';
 import Config from 'react-native-config';
 
 interface WeatherData {
@@ -21,9 +21,16 @@ interface WeatherData {
 }
 
 const WeatherScreen: React.FC = () => {
+  const { selectedDestination } = useTravelContext();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [city, setCity] = useState('London');
+  const [city, setCity] = useState(selectedDestination?.name || 'London');
+
+  useEffect(() => {
+    if (selectedDestination?.name) {
+      setCity(selectedDestination.name);
+    }
+  }, [selectedDestination?.name]);
 
   const API_KEY = Config.OPENWEATHER_API_KEY;
 

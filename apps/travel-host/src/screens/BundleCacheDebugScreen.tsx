@@ -8,7 +8,12 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-import { useBundleCache, loadRemoteConfig } from 'travel-core';
+import {
+  useBundleCache,
+  loadRemoteConfig,
+  useRemoteRegistry,
+  getRemoteProfile,
+} from 'travel-core';
 import type { VersionedRemoteConfig } from 'travel-core';
 
 /**
@@ -18,6 +23,7 @@ import type { VersionedRemoteConfig } from 'travel-core';
  * Only available in development builds
  */
 const BundleCacheDebugScreen: React.FC = () => {
+  const { registry } = useRemoteRegistry();
   const [cacheStats, setCacheStats] = useState<any>(null);
   const [remoteConfig, setRemoteConfig] = useState<VersionedRemoteConfig>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -149,6 +155,14 @@ const BundleCacheDebugScreen: React.FC = () => {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
     >
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Remote Profile</Text>
+        <Text style={styles.statText}>Profile: {getRemoteProfile()}</Text>
+        <Text style={styles.statText}>
+          Enabled remotes: {registry?.remotes.filter(r => r.enabled).length || 0}
+        </Text>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Bundle Cache Statistics</Text>
         {cacheStats && (

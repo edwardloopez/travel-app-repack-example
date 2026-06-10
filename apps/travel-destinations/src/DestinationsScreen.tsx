@@ -9,30 +9,24 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import { LoadingSpinner, createAPIClient } from 'travel-core';
-
-interface Destination {
-  id: string;
-  name: string;
-  country: string;
-  description: string;
-  imageUrl: string;
-  rating: number;
-  price: number;
-  category: string;
-}
+import { LoadingSpinner, createAPIClient, useTravelContext } from 'travel-core';
+import {
+  toTravelDestination,
+  type MockDestination,
+} from './utils/toTravelDestination';
 
 const DestinationsScreen: React.FC = () => {
-  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const { setSelectedDestination } = useTravelContext();
+  const [destinations, setDestinations] = useState<MockDestination[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredDestinations, setFilteredDestinations] = useState<
-    Destination[]
+    MockDestination[]
   >([]);
 
   const apiClient = createAPIClient('https://api.travel.com', 'mock-key');
 
-  const mockDestinations: Destination[] = [
+  const mockDestinations: MockDestination[] = [
     {
       id: '1',
       name: 'Paris',
@@ -136,22 +130,24 @@ const DestinationsScreen: React.FC = () => {
     }
   }, [searchQuery, destinations]);
 
-  const handleDestinationPress = (destination: Destination) => {
+  const handleDestinationPress = (destination: MockDestination) => {
+    setSelectedDestination(toTravelDestination(destination));
+
     Alert.alert(
       destination.name,
-      `${destination.description}\n\nPrice: $${destination.price}\nRating: ${destination.rating}⭐`,
+      `${destination.description}\n\nPrice: $${destination.price}\nRating: ${destination.rating}⭐\n\nSelected for Weather and Search.`,
       [
         {
           text: 'Book Now',
           onPress: () =>
             Alert.alert('Booking', `Booking trip to ${destination.name}!`),
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'OK' },
       ]
     );
   };
 
-  const renderDestinationItem = ({ item }: { item: Destination }) => (
+  const renderDestinationItem = ({ item }: { item: MockDestination }) => (
     <TouchableOpacity
       style={styles.destinationCard}
       onPress={() => handleDestinationPress(item)}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { LoadingSpinner } from 'travel-core';
+import { LoadingSpinner, useTravelContext } from 'travel-core';
 
 interface SearchResult {
   id: string;
@@ -42,7 +42,16 @@ const mockResults: SearchResult[] = [
 ];
 
 const SearchScreen: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const { selectedDestination } = useTravelContext();
+  const [searchQuery, setSearchQuery] = useState(
+    selectedDestination?.name || ''
+  );
+
+  useEffect(() => {
+    if (selectedDestination?.name) {
+      setSearchQuery(selectedDestination.name);
+    }
+  }, [selectedDestination?.name]);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchType, setSearchType] = useState<

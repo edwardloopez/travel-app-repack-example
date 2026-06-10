@@ -2,7 +2,8 @@ import { ScriptManager } from '@callstack/repack/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   generateVersionedCacheKey,
-  REMOTE_CONFIGS,
+  getActiveRemoteConfig,
+  getContainerUrl,
   type VersionedRemoteConfig,
 } from '../utils/bundleVersioning';
 
@@ -153,7 +154,7 @@ export class BundleCacheManager {
    * Check for bundle updates and invalidate outdated caches
    */
   static async checkForUpdates(
-    remoteConfig: VersionedRemoteConfig = REMOTE_CONFIGS
+    remoteConfig: VersionedRemoteConfig = getActiveRemoteConfig()
   ): Promise<string[]> {
     const updatedRemotes: string[] = [];
 
@@ -194,7 +195,7 @@ export class BundleCacheManager {
   static async preloadBundles(
     remoteNames: string[],
     platform: string,
-    remoteConfig: VersionedRemoteConfig = REMOTE_CONFIGS
+    remoteConfig: VersionedRemoteConfig = getActiveRemoteConfig()
   ): Promise<void> {
     try {
       const preloadPromises = remoteNames.map(async remoteName => {
@@ -205,9 +206,13 @@ export class BundleCacheManager {
         }
 
         try {
-          const bundleUrl = `${config.url}/${platform}/${remoteName}.container.js.bundle`;
-          await ScriptManager.shared.prefetchScript(bundleUrl);
-          console.log(`BundleCache: Preloaded ${remoteName} for ${platform}`);
+          const bundleUrl = getContainerUrl(remoteName, platform);
+          const startedAt = Date.now();
+          // Use the MF container name so Repack's resolver-plugin can map the URL.
+          await ScriptManager.shared.prefetchScript(remoteName);
+          console.log(
+            `BundleCache: Preloaded ${remoteName} in ${Date.now() - startedAt}ms from ${bundleUrl}`
+          );
         } catch (error) {
           console.warn(`BundleCache: Failed to preload ${remoteName}:`, error);
         }
