@@ -166,6 +166,9 @@ git clone <repository-url>
 cd travel-app-repack-example
 pnpm install
 
+# CI uses frozen lockfile: pnpm install:ci
+# Supply-chain hardening: see docs/SECURITY-PNPM.md
+
 # 2. iOS setup (if developing for iOS)
 cd apps/travel-host/ios
 pod install

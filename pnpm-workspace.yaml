@@ -1,3 +1,29 @@
+# npm security best practices
+# https://github.com/lirantal/npm-security-best-practices
+
 packages:
   - "apps/*"
   - "packages/*"
+
+# SECURITY: block packages newer than 7 days (10080 minutes)
+minimumReleaseAge: 10080
+
+# SECURITY: reject a version whose publishing trust signals regressed (pnpm 10.21+)
+trustPolicy: no-downgrade
+
+# Older packages without provenance are not blocked (pnpm 10.27+)
+trustPolicyIgnoreAfter: 43200
+
+# SECURITY: pnpm blocks install scripts by default; allow only vetted native/tooling builds
+allowBuilds:
+  esbuild: true
+  fsevents: true
+  nx@21.0.2: true
+  rolldown: true
+  unrs-resolver: true
+
+# SECURITY: fail install if a dependency runs a build script not in allowBuilds
+strictDepBuilds: true
+
+# SECURITY: transitive deps must resolve from registry (no git/tarball subdeps)
+blockExoticSubdeps: true

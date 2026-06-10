@@ -32,7 +32,10 @@
     "build:remotes:ios": "node scripts/build-remotes.mjs ios && node scripts/generate-registry.mjs",
     "serve:remotes": "node scripts/serve-remotes.mjs",
     "align-deps": "pnpm -r align-deps",
-    "check-deps": "pnpm -r check-deps"
+    "check-deps": "pnpm -r check-deps",
+    "install:ci": "pnpm install --frozen-lockfile",
+    "security:audit": "pnpm audit",
+    "security:audit:fix": "pnpm audit --fix"
   },
   "devDependencies": {
     "@nx/eslint": "21.0.2",
