@@ -2,6 +2,7 @@ import { createLazyFederatedScreen } from '../federation/createLazyFederatedScre
 
 export default createLazyFederatedScreen({
   remoteName: 'TravelWeather',
+  loadModule: () => import('TravelWeather/WeatherScreen'),
   moduleName: 'WeatherScreen',
   loadingLabel: 'Weather',
   fallbackTitle: 'Weather Service',

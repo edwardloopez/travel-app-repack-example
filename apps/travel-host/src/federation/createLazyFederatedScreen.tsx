@@ -13,52 +13,32 @@ import {
   FederationErrorFallback,
 } from 'travel-core';
 
+export type FederatedModuleLoader = () => Promise<{
+  default: React.ComponentType;
+}>;
+
 export interface LazyFederatedScreenOptions {
   remoteName: string;
-  moduleName: string;
+  loadModule: FederatedModuleLoader;
+  /** Used in logs only; the static import lives in loadModule. */
+  moduleName?: string;
   loadingLabel: string;
   fallbackTitle: string;
   fallbackIcon?: string;
   startCommand: string;
 }
 
-async function loadFederatedModule(
-  remoteName: string,
-  moduleName: string
-): Promise<React.ComponentType> {
-  let module: { default: React.ComponentType };
-  switch (`${remoteName}/${moduleName}`) {
-    case 'TravelWeather/WeatherScreen':
-      module = await import('TravelWeather/WeatherScreen');
-      break;
-    case 'TravelDestinations/DestinationsScreen':
-      module = await import('TravelDestinations/DestinationsScreen');
-      break;
-    case 'TravelSearch/SearchScreen':
-      module = await import('TravelSearch/SearchScreen');
-      break;
-    case 'TravelPhotos/PhotosScreen':
-      module = await import('TravelPhotos/PhotosScreen');
-      break;
-    default:
-      throw new Error(`Unknown federated module ${remoteName}/${moduleName}`);
-  }
-
-  if (!module?.default) {
-    throw new Error(`${moduleName} module not found`);
-  }
-
-  return module.default;
-}
-
 export function createLazyFederatedScreen({
   remoteName,
+  loadModule,
   moduleName,
   loadingLabel,
   fallbackTitle,
   fallbackIcon = '⚠️',
   startCommand,
 }: LazyFederatedScreenOptions) {
+  const federatedId = moduleName ? `${remoteName}/${moduleName}` : remoteName;
+
   const FederatedScreenLoader: React.FC = () => {
     const [phase, setPhase] = useState<'loading' | 'error' | 'ready'>('loading');
     const [Screen, setScreen] = useState<React.ComponentType | null>(null);
@@ -66,19 +46,22 @@ export function createLazyFederatedScreen({
 
     const loadScreen = useCallback(async () => {
       setPhase('loading');
-      console.log(`Loading ${remoteName}/${moduleName}...`);
+      console.log(`Loading ${federatedId}...`);
 
       try {
-        const Component = await loadFederatedModule(remoteName, moduleName);
-        setScreen(() => Component);
+        const module = await loadModule();
+        if (!module?.default) {
+          throw new Error(`${federatedId} module not found`);
+        }
+        setScreen(() => module.default);
         setPhase('ready');
-        console.log(`Loaded ${remoteName}/${moduleName} successfully`);
+        console.log(`Loaded ${federatedId} successfully`);
       } catch (error) {
-        console.log(`Failed to load ${remoteName}/${moduleName}:`, error);
+        console.log(`Failed to load ${federatedId}:`, error);
         setScreen(null);
         setPhase('error');
       }
-    }, []);
+    }, [loadModule]);
 
     useEffect(() => {
       loadScreen();
