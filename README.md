@@ -224,26 +224,25 @@ pnpm start:travel-host
 pnpm start:travel-weather
 ```
 
-### 3. **Remote Profiles (POC)**
+### 3. **Dev vs Prod (no `REMOTE_PROFILE` env var)**
 
-Set `apps/travel-host/.env` (see `.env.example`). MF needs only `REMOTE_PROFILE`; optional `HOST_IP_ADDRESS` for physical devices in dev. Local static URLs (`:4100`) are hardcoded in `remoteDefaults` — not in `.env`. Production external registry URL goes in `app.config.ts` → `extra.remoteRegistryUrl`.
+Profile is derived automatically:
 
-| Profile | Description |
-|---------|-------------|
-| `dev` | Live bundlers on ports 9000-9003 (default) |
-| `static` | Pre-built bundles served from `remotes-dist/` |
-| `external` | Registry-only mode simulating separate repos |
+| Mode | Runtime | MF URLs | Registry |
+|------|---------|---------|----------|
+| **dev** | `__DEV__` | Live bundlers `:9000-9003` (build-time rspack) | In-memory from catalog |
+| **prod** | release build | CDN / `:4100` fallback | `fetch(remote-registry.json)` + `registerRemotes()` |
+
+Dev MF URLs use `localhost` (simulator). Prod registry URL: `app.config.ts` → `extra.remoteRegistryUrl`.
 
 ```bash
-# Static CDN simulation
-pnpm build:remotes:ios   # or :android
-pnpm serve:remotes       # terminal 1 — :4100
-# apps/travel-host/.env → REMOTE_PROFILE=static
-pnpm start:travel-host   # terminal 2
-pnpm run:travel-host:ios # terminal 3
+# Dev (default debug build)
+pnpm start
 
-# External repo simulation (.env → REMOTE_PROFILE=external)
-pnpm start:travel-host
+# Prod-like local test (release build + static bundles)
+pnpm build:remotes:ios
+pnpm serve:remotes       # :4100
+pnpm run:travel-host:ios --configuration Release
 ```
 
 ### 4. **Standalone Mode**

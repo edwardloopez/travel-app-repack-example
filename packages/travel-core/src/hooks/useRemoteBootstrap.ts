@@ -50,7 +50,7 @@ export function useRemoteBootstrap(
           enabledRemoteNames.includes(name)
         );
 
-        // Prefetch uses direct container URLs — only for pre-built bundles (static/external).
+        // Prefetch uses direct container URLs — only for prod (pre-built bundles).
         if (profile !== 'dev' && preloadTargets.length > 0) {
           await preloadBundles(preloadTargets, Platform.OS, config);
         }

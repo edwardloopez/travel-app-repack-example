@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 const outputPath = path.join(rootDir, 'remotes-dist', 'remote-registry.json');
 
-const registry = buildRegistryJson(process.env.REMOTE_PROFILE || 'static');
+const registry = buildRegistryJson('prod');
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, JSON.stringify(registry, null, 2));

@@ -33,7 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [],
   extra: {
-    // Production external profile: set the CDN registry URL here.
+    // Prod registry URL (release builds fetch this at runtime).
     // remoteRegistryUrl: 'https://cdn.tuempresa.com/remote-registry.json',
   },
 });

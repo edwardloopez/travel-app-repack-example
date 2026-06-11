@@ -1,5 +1,5 @@
 import { registerRemotes } from '@module-federation/runtime-tools/runtime';
-import { loadRemoteRegistry } from 'travel-core';
+import { getRemoteProfile, loadRemoteRegistry } from 'travel-core';
 
 let initialized = false;
 
@@ -9,11 +9,11 @@ export async function initDynamicRemotes(platform: string) {
   }
 
   const registry = await loadRemoteRegistry(platform);
-  const profile = registry.profile || 'dev';
+  const profile = getRemoteProfile();
 
-  // Dev/static remotes are declared at build time in rspack (buildHostRemotes).
+  // Dev remotes are declared at build time in rspack (buildHostRemotes).
   // Re-registering here breaks RepackResolverPlugin (missing referenceUrl).
-  if (profile === 'external') {
+  if (profile === 'prod') {
     const remotes = registry.remotes
       .filter(remote => remote.enabled)
       .map(remote => ({

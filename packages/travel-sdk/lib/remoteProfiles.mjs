@@ -1,15 +1,16 @@
 import {
+  DEV_MF_HOST,
   LOCAL_REGISTRY_URL,
   LOCAL_STATIC_BASE_URL,
 } from './remoteDefaults.mjs';
 import { REMOTE_NAMES, REMOTES_CATALOG } from './remotesCatalog.mjs';
 
 function getHostIp() {
-  return process.env.HOST_IP_ADDRESS || 'localhost';
+  return DEV_MF_HOST;
 }
 
 function getProfile() {
-  return process.env.REMOTE_PROFILE || 'dev';
+  return process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
 }
 
 function getStaticBaseUrl() {
@@ -22,7 +23,7 @@ function getRegistryUrl() {
 
 function resolveRemoteBaseUrl(remoteName, profile = getProfile()) {
   const entry = REMOTES_CATALOG[remoteName];
-  if (profile === 'static' || profile === 'external') {
+  if (profile === 'prod') {
     return `${getStaticBaseUrl()}/${entry.slug}`;
   }
 

@@ -1,6 +1,6 @@
 {
   "hostMinVersion": "1.0.0",
-  "profile": "static",
+  "profile": "prod",
   "remotes": [
     {
       "name": "TravelWeather",

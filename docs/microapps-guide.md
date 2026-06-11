@@ -141,13 +141,13 @@ sequenceDiagram
 El host declara remotes en build time vía `createHostRspackConfig()` → `buildHostRemotes(profile, platform)` (`packages/travel-sdk/lib/remoteProfiles.mjs`):
 
 ```javascript
-// Perfil dev → :9000-9003 | static/external → localhost:4100 (constante en remoteDefaults)
+// dev → :9000-9003 | prod → localhost:4100 o CDN (remoteDefaults / registry)
 remotes: buildHostRemotes(undefined, platform),
-// Ejemplo static/ios:
+// Ejemplo prod/ios (build rspack):
 // TravelWeather@http://localhost:4100/weather/ios/mf-manifest.json
 ```
 
-`${platform}` se resuelve a `ios` o `android` en build time del host. La URL base depende de `REMOTE_PROFILE` en `.env` (cargado por `rspack.config.mjs` + `dotenv`).
+`${platform}` se resuelve a `ios` o `android` en build time del host. La URL base depende de `NODE_ENV` en rspack (`dev` vs `prod`).
 
 #### Fase 2 — Fetch del manifest
 
@@ -186,7 +186,7 @@ https://cdn.tuempresa.com/mf/weather/v1.2.0/android/mf-manifest.json
 https://cdn.tuempresa.com/mf/weather/v1.2.0/android/TravelWeather.container.js.bundle
 ```
 
-> **Importante:** En dispositivo físico, `localhost` no funciona. Usa `HOST_IP_ADDRESS` en `.env`.
+> **Nota:** En dev las URLs usan `localhost` (`DEV_MF_HOST` en `remoteDefaults`). Pensado para simulador; dispositivo físico requerirá otra estrategia más adelante.
 
 ### 2.4 Caché: dónde vive el bundle descargado
 
@@ -347,10 +347,7 @@ adb reverse tcp:9003 tcp:9003
 
 #### Dispositivo en red local
 
-```bash
-# .env
-HOST_IP_ADDRESS=192.168.1.100
-```
+Fuera de alcance del POC actual (dev usa `localhost` para simulador). Futuro: IP de LAN o `adb reverse`.
 
 ---
 
@@ -477,11 +474,11 @@ Usuario abre feature → descarga → renderiza
 ### 5.2 Preload al inicio
 
 ```typescript
-// useRemoteBootstrap — solo en perfiles static/external (no en dev)
+// useRemoteBootstrap — prefetch solo en prod (no en dev)
 BundleCacheManager.preloadBundles(['TravelWeather', 'TravelSearch'], platform, config);
 ```
 
-- **Cuándo:** bundles precompilados en CDN (`static` / `external`)
+- **Cuándo:** bundles precompilados en CDN (prod)
 - **No en dev:** el prefetch por container directo falla si los bundlers `:9000` no están levantados; en dev la carga ocurre al navegar vía MF
 
 ### 5.3 Preload predictivo
@@ -539,7 +536,7 @@ El host lee config del backend con versión por segmento de usuario.
 - [ ] Estudiar `apps/travel-weather/rspack.config.mjs`
 - [ ] Modificar un `expose` y consumirlo desde el host
 - [ ] Cambiar una versión en `dependencies.json` y observar el efecto
-- [ ] Probar en dispositivo físico con `HOST_IP_ADDRESS`
+- [ ] Probar en simulador (dev usa `localhost`)
 
 ### Semana 3 — Runtime y caché
 
@@ -574,11 +571,11 @@ El host lee config del backend con versión por segmento de usuario.
 | `Failed to load remote entry` | Remote no corriendo o puerto incorrecto | `pnpm start:travel-weather` |
 | `remoteEntryExports is undefined` | Manifest incorrecto o versión MF incompatible | Verificar `mf-manifest.json` |
 | `Singleton version mismatch` | Versiones distintas de `react`/`react-native` | Alinear `dependencies.json` |
-| Pantalla en blanco en dispositivo | `localhost` en lugar de IP real | `HOST_IP_ADDRESS=192.168.x.x` |
+| Pantalla en blanco en dispositivo físico | `localhost` no alcanza el Mac | Usar simulador o estrategia LAN futura |
 | Hooks error / invalid hook call | Dos instancias de React | Verificar `singleton: true` |
 | Bundle viejo después de deploy | Versión no actualizada en registry o caché | Bump `version` en registry + reiniciar app |
-| `ScriptDownloadFailure` en boot (dev) | Prefetch con bundlers apagados | Normal en dev; usar `static` o levantar remotes |
-| Log `(dev)` pero pantallas van a `:4100` | `REMOTE_PROFILE` desincronizado | Unificar `.env` + rebuild nativo (`expo run:ios`) |
+| `ScriptDownloadFailure` en boot (dev) | Prefetch con bundlers apagados | Normal en dev; levantar remotes o usar release build |
+| Debug va a `:4100` en vez de `:900x` | Build release con debug mental model | Debug = `__DEV__`; `:4100` es solo prod |
 | `babel-plugin-transform-remove-console` | Falta en remotes al build producción | `pnpm add -D babel-plugin-transform-remove-console --filter TravelWeather` |
 | Puerto en uso | Otro proceso ocupa el puerto | `lsof -i :9000` y matar proceso |
 
@@ -654,11 +651,11 @@ Antes de implementar micro-apps en producción, responde:
 |---------|-------------|
 | `packages/travel-sdk/lib/createRspackConfig.mjs` | Factory rspack host/remotes + `buildHostRemotes` |
 | `packages/travel-sdk/lib/remotesCatalog.json` | Catálogo único: slug, devPort, version por remote |
-| `packages/travel-sdk/lib/remoteProfiles.mjs` | Perfiles dev/static/external y registry JSON |
+| `packages/travel-sdk/lib/remoteProfiles.mjs` | Modos dev/prod (NODE_ENV) y registry JSON |
 | `apps/travel-host/app.config.ts` | Config Expo (prebuild); `.env` para runtime |
 | `apps/travel-host/rspack.config.mjs` | Entry host + `dotenv` + plugins MF |
 | `apps/travel-host/src/federation/createLazyFederatedScreen.tsx` | Carga lazy + fallback + retry |
-| `apps/travel-host/src/federation/initRemotes.ts` | `registerRemotes` solo en `external` |
+| `apps/travel-host/src/federation/initRemotes.ts` | `registerRemotes` solo en `prod` |
 | `packages/travel-core/src/utils/remoteRegistry.ts` | Catálogo de remotes por perfil |
 | `packages/travel-core/src/utils/bundleCacheManager.ts` | Caché, preload, invalidación |
 | `packages/travel-core/src/utils/bundleVersioning.ts` | `loadRemoteConfig`, claves versionadas |
@@ -680,7 +677,7 @@ Antes de implementar micro-apps en producción, responde:
 
 ---
 
-**Última actualización:** junio 2026 — React Native 0.80.2, Re.Pack 5.2.0, MF 0.13.1, Expo 53 (host), perfiles dev/static/external, retry de descarga, `app.config.ts`.
+**Última actualización:** junio 2026 — React Native 0.80.2, Re.Pack 5.2.0, MF 0.13.1, Expo 53 (host), modos dev/prod (`__DEV__`), retry de descarga, `app.config.ts`.
 
 ---
 
@@ -690,7 +687,7 @@ Antes de implementar micro-apps en producción, responde:
 
 - **Expo 53** (prebuild): `expo run:ios` / `app.config.ts` — solo el host, no los remotes
 - **Re.Pack 5** (`react-native start`): bundler JS del host en `:8081`
-- **Module Federation V2**: remotes en build time (`dev`/`static`) o runtime (`external`)
+- **Module Federation V2**: remotes en build time (`dev`) o runtime (`prod`)
 
 ### Flujo de descarga (funciones en orden)
 
@@ -706,9 +703,9 @@ RemoteBootstrapGate
  └─ useRemoteBootstrap(initDynamicRemotes)
       ├─ refreshRegistry() → loadRemoteRegistry()     ← catálogo por perfil
       ├─ loadRemoteConfig() → setActiveRemoteConfig() ← URLs + versiones
-      ├─ initDynamicRemotes()                         ← registerRemotes solo external
+      ├─ initDynamicRemotes()                         ← registerRemotes solo prod
       ├─ checkForUpdates(config)                      ← invalida caché vieja
-      └─ preloadBundles()                             ← solo static/external
+      └─ preloadBundles()                             ← solo prod
 ```
 
 **Al navegar a una micro-app (ej. Weather):**
@@ -725,59 +722,46 @@ createLazyFederatedScreen()
 
 **Si falla:** botón Retry → `BundleCacheManager.invalidateRemote()` → nuevo `import()`.
 
-### Tres perfiles (`REMOTE_PROFILE`)
+### Dos modos: `dev` y `prod` (sin `REMOTE_PROFILE`)
 
-| Perfil | URLs MF (rspack build) | Registry runtime | `registerRemotes()` |
-|--------|------------------------|------------------|---------------------|
-| `dev` | `:9000-9003` | `buildDevRegistry()` en memoria | No — build-time |
-| `static` | `:4100` (CDN local) | `buildStaticRegistry()` en memoria | No — build-time |
-| `external` | No embebidas | `fetch(remote-registry.json)` | Sí — runtime |
+El perfil se infiere del build — no hay variable de entorno:
 
-Variables MF en `apps/travel-host/.env` (ver `.env.example`):
+| Modo | Cómo se detecta | URLs MF (rspack) | Registry runtime | `registerRemotes()` |
+|------|-------------------|------------------|------------------|---------------------|
+| **dev** | `__DEV__` (debug) / `NODE_ENV !== 'production'` (rspack) | `:9000-9003` | `buildDevRegistry()` | No — build-time |
+| **prod** | release / `NODE_ENV === 'production'` | `:4100` o CDN | `fetch(remote-registry.json)` | Sí — runtime |
 
-```env
-REMOTE_PROFILE=static
-# HOST_IP_ADDRESS=192.168.x.x   # opcional: dev + dispositivo físico
-```
+No hay variables MF en `.env` — dev/prod se infieren del build. URLs locales en `remoteDefaults.ts` / `remoteDefaults.mjs` (`DEV_MF_HOST`, `:4100`).
 
-URLs locales (`http://localhost:4100`, registry en `/remote-registry.json`) están hardcodeadas en `packages/travel-core/src/constants/remoteDefaults.ts` y `packages/travel-sdk/lib/remoteDefaults.mjs` — no van en `.env`.
+**Prod:** URL del registry en `app.config.ts` → `extra.remoteRegistryUrl`.
 
-**Producción `external`:** URL del registry en `apps/travel-host/app.config.ts` → `extra.remoteRegistryUrl` (no en `.env`).
+**Dos capas:** rspack usa `NODE_ENV`; runtime usa `__DEV__`. Tras cambiar `.env`, reinicia el dev server.
 
-**Dos capas de config:** rspack lee `.env` vía `dotenv`; runtime lee `react-native-config` + `process.env` inlineado (babel). Tras cambiar `.env`, reinicia el dev server; si `Config` nativo quedó viejo, haz `pnpm run:travel-host:ios`.
+### Monorepo vs repo separado (simulado en prod)
 
-### Monorepo vs repo separado (simulado)
-
-| Aspecto | Monorepo (`dev`/`static`) | Repo separado (`external`) |
-|---------|---------------------------|----------------------------|
-| Shared deps | `workspace:*` via `travel-sdk` | Contrato `@org/travel-sdk` publicado |
-| URLs | `buildHostRemotes()` en rspack | Solo en `remote-registry.json` |
-| Rebuild host al cambiar URL | Sí (dev/static) | No (runtime register) |
-| Build remotes | `pnpm build:remotes:ios` | Igual, simula CI externo |
-| Registry en git | `remotes-dist/remote-registry.json` sí; bundles no | JSON en CDN |
+| Aspecto | Dev (debug) | Prod (release) |
+|---------|-------------|----------------|
+| URLs | `buildHostRemotes()` → puertos locales | `remote-registry.json` + `registerRemotes()` |
+| Rebuild host al cambiar URL | Sí | No (runtime register) |
+| Registry | Catálogo en memoria | CDN / `:4100` fallback |
 
 ### `startCommand` en Lazy*Screen y registry
 
-Campo **solo informativo** para el fallback UI (“Start it first: `pnpm start:travel-weather`”). No ejecuta comandos. En `static` lo correcto sería `pnpm serve:remotes`.
+Campo **solo informativo** para el fallback UI. En prod el fallback suele ser `pnpm serve:remotes` (local) o irrelevante (CDN).
 
 ### Comandos POC
 
 ```bash
-# Desarrollo (5 bundlers)
+# Desarrollo (debug — perfil dev automático)
 pnpm start
 pnpm adbreverse   # Android físico: 8081, 9000-9003, 4100
 
-# Simular CDN (static)
-pnpm build:remotes:ios    # requiere babel-plugin-transform-remove-console en remotes
-pnpm serve:remotes        # terminal 1
-# .env → REMOTE_PROFILE=static
-pnpm start:travel-host    # terminal 2
-pnpm run:travel-host:ios  # terminal 3
+# Prod-like local (release build)
+pnpm build:remotes:ios
+pnpm serve:remotes
+pnpm run:travel-host:ios --configuration Release
 
-# Simular repos separados (external)
-# .env → REMOTE_PROFILE=external
-# Registry local: http://localhost:4100/remote-registry.json (default en código)
-# Prod: app.config.ts → extra.remoteRegistryUrl
+# Prod real: app.config.ts → extra.remoteRegistryUrl
 
 # Deshabilitar un remote sin rebuild del host
 # remote-registry.json → "enabled": false

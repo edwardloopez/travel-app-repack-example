@@ -1,9 +1,9 @@
 import { Platform } from 'react-native';
 import { REMOTE_NAMES, REMOTES_CATALOG } from '../constants/remotesCatalog';
-import { LOCAL_STATIC_BASE_URL } from '../constants/remoteDefaults';
-import { getConfigValue, getRemoteRegistryUrl } from './appConfig';
+import { DEV_MF_HOST, LOCAL_STATIC_BASE_URL } from '../constants/remoteDefaults';
+import { getRemoteRegistryUrl } from './appConfig';
 
-export type RemoteProfile = 'dev' | 'static' | 'external';
+export type RemoteProfile = 'dev' | 'prod';
 
 export interface RemoteRegistryEntry {
   name: string;
@@ -59,16 +59,13 @@ export const FEATURE_METADATA: Record<
   },
 };
 
+/** Dev vs prod is derived from the build — no REMOTE_PROFILE env var. */
 export function getRemoteProfile(): RemoteProfile {
-  const profile = getConfigValue('REMOTE_PROFILE') || 'dev';
-  if (profile === 'static' || profile === 'external') {
-    return profile;
-  }
-  return 'dev';
+  return __DEV__ ? 'dev' : 'prod';
 }
 
 export function getHostIp(): string {
-  return getConfigValue('HOST_IP_ADDRESS') || 'localhost';
+  return DEV_MF_HOST;
 }
 
 export function getStaticBaseUrl(): string {
@@ -105,12 +102,13 @@ function buildDevRegistry(platform: string): RemoteRegistry {
   };
 }
 
-function buildStaticRegistry(platform: string): RemoteRegistry {
+/** Local CDN fallback when prod registry fetch fails (e.g. serve:remotes on :4100). */
+function buildProdFallbackRegistry(platform: string): RemoteRegistry {
   const baseUrl = getStaticBaseUrl();
 
   return {
     hostMinVersion: '1.0.0',
-    profile: 'static',
+    profile: 'prod',
     remotes: REMOTE_NAMES.map(name => ({
       name,
       entry: `${baseUrl}/${REMOTES_CATALOG[name].slug}/${platform}/mf-manifest.json`,
@@ -127,7 +125,7 @@ export async function loadRemoteRegistry(
 ): Promise<RemoteRegistry> {
   const profile = getRemoteProfile();
 
-  if (profile === 'external') {
+  if (profile === 'prod') {
     try {
       const response = await fetch(getRegistryUrl());
       if (!response.ok) {
@@ -136,6 +134,7 @@ export async function loadRemoteRegistry(
       const registry = (await response.json()) as RemoteRegistry;
       return {
         ...registry,
+        profile: 'prod',
         remotes: registry.remotes.map(remote => ({
           ...FEATURE_METADATA[remote.name],
           ...remote,
@@ -143,13 +142,9 @@ export async function loadRemoteRegistry(
         })),
       };
     } catch (error) {
-      console.warn('Failed to load external registry, using static fallback:', error);
-      return buildStaticRegistry(platform);
+      console.warn('Failed to load prod registry, using local fallback:', error);
+      return buildProdFallbackRegistry(platform);
     }
-  }
-
-  if (profile === 'static') {
-    return buildStaticRegistry(platform);
   }
 
   return buildDevRegistry(platform);

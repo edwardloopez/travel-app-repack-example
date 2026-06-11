@@ -30,7 +30,7 @@ export interface VersionedRemoteConfig {
 let activeRemoteConfig: VersionedRemoteConfig | null = null;
 
 function resolveRemoteBaseUrl(remoteName: string, profile = getRemoteProfile()) {
-  if (profile === 'static' || profile === 'external') {
+  if (profile === 'prod') {
     return `${getStaticBaseUrl()}/${REMOTES_CATALOG[remoteName].slug}`;
   }
 
