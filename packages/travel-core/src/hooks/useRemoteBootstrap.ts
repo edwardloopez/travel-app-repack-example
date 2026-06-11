@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { useRemoteRegistry } from '../context/RemoteRegistryContext';
 import { useBundleCache } from '../utils/bundleCacheManager';
-import { loadRemoteConfig } from '../utils/bundleVersioning';
-import { getRemoteProfile } from '../utils/remoteRegistry';
+import { applyRemoteConfig } from '../utils/bundleVersioning';
+import { getRemoteProfile, loadRemoteRegistry } from '../utils/remoteRegistry';
+import type { RemoteRegistry } from '../utils/remoteRegistry';
 
 export interface BootstrapStatus {
   isBootstrapping: boolean;
@@ -17,9 +18,12 @@ export interface BootstrapStatus {
 const PRELOAD_REMOTES = ['TravelWeather', 'TravelSearch'];
 
 export function useRemoteBootstrap(
-  initDynamicRemotes?: (platform: string) => Promise<void>
+  initDynamicRemotes?: (
+    platform: string,
+    registry: RemoteRegistry
+  ) => Promise<void>
 ) {
-  const { refreshRegistry, setRegistry, isReady } = useRemoteRegistry();
+  const { applyRegistry, isReady } = useRemoteRegistry();
   const { checkForUpdates, preloadBundles } = useBundleCache();
   const [status, setStatus] = useState<BootstrapStatus>({
     isBootstrapping: true,
@@ -34,11 +38,12 @@ export function useRemoteBootstrap(
 
     const bootstrap = async () => {
       try {
-        const registry = await refreshRegistry();
-        const config = await loadRemoteConfig();
+        const registry = await loadRemoteRegistry(Platform.OS);
+        applyRegistry(registry);
+        const config = applyRemoteConfig(registry);
 
         if (initDynamicRemotes) {
-          await initDynamicRemotes(Platform.OS);
+          await initDynamicRemotes(Platform.OS, registry);
         }
 
         const updatedRemotes = await checkForUpdates(config);
@@ -56,7 +61,6 @@ export function useRemoteBootstrap(
         }
 
         if (!cancelled) {
-          setRegistry(registry);
           setStatus({
             isBootstrapping: false,
             isReady: true,

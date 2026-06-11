@@ -9,6 +9,7 @@ import {
   getRemoteProfile,
   getStaticBaseUrl,
   loadRemoteRegistry,
+  type RemoteRegistry,
 } from './remoteRegistry';
 
 export interface BundleVersion {
@@ -90,23 +91,39 @@ export function isVersionCompatible(
   return currentMajor === cachedMajor && currentMinor >= cachedMinor;
 }
 
-export async function loadRemoteConfig(): Promise<VersionedRemoteConfig> {
-  try {
-    const registry = await loadRemoteRegistry();
-    const config = registry.remotes.reduce((acc, remote) => {
-      const manifestUrl = remote.entry;
-      const baseUrl = manifestUrl.replace(/\/[^/]+\/mf-manifest\.json$/, '');
-      acc[remote.name] = {
-        version: remote.version,
-        name: remote.name,
-        url: baseUrl,
-        manifestUrl,
-      };
-      return acc;
-    }, {} as VersionedRemoteConfig);
+export function remoteConfigFromRegistry(
+  registry: RemoteRegistry
+): VersionedRemoteConfig {
+  return registry.remotes.reduce((acc, remote) => {
+    const manifestUrl = remote.entry;
+    const baseUrl = manifestUrl.replace(/\/[^/]+\/mf-manifest\.json$/, '');
+    acc[remote.name] = {
+      version: remote.version,
+      name: remote.name,
+      url: baseUrl,
+      manifestUrl,
+    };
+    return acc;
+  }, {} as VersionedRemoteConfig);
+}
 
-    setActiveRemoteConfig(config);
-    return config;
+/** Apply URLs/versions from an already-loaded registry (no fetch). */
+export function applyRemoteConfig(registry: RemoteRegistry): VersionedRemoteConfig {
+  const config = remoteConfigFromRegistry(registry);
+  setActiveRemoteConfig(config);
+  return config;
+}
+
+export async function loadRemoteConfig(
+  registry?: RemoteRegistry
+): Promise<VersionedRemoteConfig> {
+  if (registry) {
+    return applyRemoteConfig(registry);
+  }
+
+  try {
+    const loaded = await loadRemoteRegistry();
+    return applyRemoteConfig(loaded);
   } catch (error) {
     console.warn('Failed to load remote config, using defaults:', error);
     const fallback = buildRemoteConfig();

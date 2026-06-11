@@ -1,14 +1,16 @@
 import { registerRemotes } from '@module-federation/runtime-tools/runtime';
-import { getRemoteProfile, loadRemoteRegistry } from 'travel-core';
+import { getRemoteProfile, type RemoteRegistry } from 'travel-core';
 
 let initialized = false;
 
-export async function initDynamicRemotes(platform: string) {
+export async function initDynamicRemotes(
+  _platform: string,
+  registry: RemoteRegistry
+) {
   if (initialized) {
     return;
   }
 
-  const registry = await loadRemoteRegistry(platform);
   const profile = getRemoteProfile();
 
   // Dev remotes are declared at build time in rspack (buildHostRemotes).

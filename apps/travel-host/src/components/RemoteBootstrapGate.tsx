@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { useRemoteBootstrap } from 'travel-core';
+import { useRemoteBootstrap, type RemoteRegistry } from 'travel-core';
 import { initDynamicRemotes } from '../federation/initRemotes';
 
 interface RemoteBootstrapGateProps {
@@ -11,7 +11,8 @@ const RemoteBootstrapGate: React.FC<RemoteBootstrapGateProps> = ({
   children,
 }) => {
   const bootstrapRemotes = useCallback(
-    (platform: string) => initDynamicRemotes(platform),
+    (platform: string, registry: RemoteRegistry) =>
+      initDynamicRemotes(platform, registry),
     []
   );
   const status = useRemoteBootstrap(bootstrapRemotes);

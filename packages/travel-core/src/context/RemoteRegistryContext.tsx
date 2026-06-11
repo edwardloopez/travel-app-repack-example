@@ -15,7 +15,7 @@ interface RemoteRegistryContextValue {
   registry: RemoteRegistry | null;
   isReady: boolean;
   enabledFeatures: ReturnType<typeof getEnabledFeatures>;
-  setRegistry: (registry: RemoteRegistry) => void;
+  applyRegistry: (registry: RemoteRegistry) => void;
   refreshRegistry: () => Promise<RemoteRegistry>;
 }
 
@@ -29,10 +29,14 @@ export const RemoteRegistryProvider: React.FC<{ children: ReactNode }> = ({
   const [registry, setRegistry] = useState<RemoteRegistry | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  const refreshRegistry = async () => {
-    const nextRegistry = await loadRemoteRegistry();
+  const applyRegistry = (nextRegistry: RemoteRegistry) => {
     setRegistry(nextRegistry);
     setIsReady(true);
+  };
+
+  const refreshRegistry = async () => {
+    const nextRegistry = await loadRemoteRegistry();
+    applyRegistry(nextRegistry);
     return nextRegistry;
   };
 
@@ -47,7 +51,7 @@ export const RemoteRegistryProvider: React.FC<{ children: ReactNode }> = ({
         registry,
         isReady,
         enabledFeatures,
-        setRegistry,
+        applyRegistry,
         refreshRegistry,
       }}
     >

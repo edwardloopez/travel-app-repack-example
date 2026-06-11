@@ -701,9 +701,9 @@ App
 
 RemoteBootstrapGate
  └─ useRemoteBootstrap(initDynamicRemotes)
-      ├─ refreshRegistry() → loadRemoteRegistry()     ← catálogo por perfil
-      ├─ loadRemoteConfig() → setActiveRemoteConfig() ← URLs + versiones
-      ├─ initDynamicRemotes()                         ← registerRemotes solo prod
+      ├─ loadRemoteRegistry() (una vez)               ← catálogo por perfil
+      ├─ applyRegistry() + applyRemoteConfig()        ← context + URLs/versiones
+      ├─ initDynamicRemotes(platform, registry)       ← registerRemotes solo prod
       ├─ checkForUpdates(config)                      ← invalida caché vieja
       └─ preloadBundles()                             ← solo prod
 ```
