@@ -8,11 +8,13 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import {
   useBundleCache,
   applyRemoteConfig,
   useRemoteRegistry,
   getRemoteProfile,
+  useLiveCacheStats,
 } from 'travel-core';
 import type { VersionedRemoteConfig } from 'travel-core';
 
@@ -23,16 +25,17 @@ import type { VersionedRemoteConfig } from 'travel-core';
  * Pull-to-refresh intentionally re-fetches via refreshRegistry().
  */
 const BundleCacheDebugScreen: React.FC = () => {
+  const isFocused = useIsFocused();
   const { registry, isReady, refreshRegistry } = useRemoteRegistry();
-  const [cacheStats, setCacheStats] = useState<any>(null);
   const [remoteConfig, setRemoteConfig] = useState<VersionedRemoteConfig>({});
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { cacheStats, loading, refresh: refreshCacheStats } = useLiveCacheStats(
+    isReady && isFocused
+  );
 
   const {
     invalidateRemote,
     invalidateAll,
-    getCacheStats,
     checkForUpdates,
     preloadBundles,
   } = useBundleCache();
@@ -44,32 +47,15 @@ const BundleCacheDebugScreen: React.FC = () => {
     setRemoteConfig(applyRemoteConfig(registry));
   }, [registry]);
 
-  const loadCacheStats = async () => {
-    try {
-      setCacheStats(await getCacheStats());
-    } catch (error) {
-      console.error('Error loading cache data:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!isReady) {
-      return;
-    }
-    loadCacheStats();
-  }, [isReady]);
-
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
       const nextRegistry = await refreshRegistry();
       setRemoteConfig(applyRemoteConfig(nextRegistry));
-      await loadCacheStats();
+      await refreshCacheStats();
     } catch (error) {
       console.error('Error refreshing registry:', error);
+    } finally {
       setRefreshing(false);
     }
   };
@@ -85,7 +71,7 @@ const BundleCacheDebugScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             await invalidateAll();
-            await loadCacheStats();
+            await refreshCacheStats();
             Alert.alert('Success', 'All cached bundles cleared');
           },
         },
@@ -104,7 +90,7 @@ const BundleCacheDebugScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             await invalidateRemote(remoteName, platform);
-            await loadCacheStats();
+            await refreshCacheStats();
             Alert.alert('Success', `Cache cleared for ${remoteName}`);
           },
         },
@@ -125,7 +111,7 @@ const BundleCacheDebugScreen: React.FC = () => {
         Alert.alert('No Updates', 'All bundles are up to date');
       }
 
-      await loadCacheStats();
+      await refreshCacheStats();
     } catch (error) {
       Alert.alert('Error', 'Failed to check for updates');
     }
@@ -137,7 +123,7 @@ const BundleCacheDebugScreen: React.FC = () => {
       await preloadBundles(remoteNames, 'ios', remoteConfig);
 
       Alert.alert('Success', 'Bundles preloaded');
-      await loadCacheStats();
+      await refreshCacheStats();
     } catch (error) {
       Alert.alert('Error', 'Failed to preload bundles');
     }

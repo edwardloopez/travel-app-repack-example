@@ -8,7 +8,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { LoadingSpinner, createAPIClient, useTravelContext } from 'travel-core';
+import { createAPIClient, useTravelContext } from 'travel-core';
 import Config from 'react-native-config';
 
 interface WeatherData {
@@ -75,15 +75,6 @@ const WeatherScreen: React.FC = () => {
     fetchWeather(city);
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <LoadingSpinner />
-        <Text style={styles.loadingText}>Fetching weather data...</Text>
-      </View>
-    );
-  }
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>🌤️ Travel Weather</Text>
@@ -101,7 +92,7 @@ const WeatherScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {weather && (
+      {weather ? (
         <View style={styles.weatherCard}>
           <Text style={styles.location}>{weather.location}</Text>
           <Text style={styles.temperature}>{weather.temperature}°C</Text>
@@ -118,7 +109,9 @@ const WeatherScreen: React.FC = () => {
             </View>
           </View>
         </View>
-      )}
+      ) : loading ? (
+        <Text style={styles.pendingText}>Fetching weather data...</Text>
+      ) : null}
 
       <Text style={styles.footer}>
         Get real-time weather information for your travel destinations
@@ -218,10 +211,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2c3e50',
   },
-  loadingText: {
+  pendingText: {
     textAlign: 'center',
-    marginTop: 20,
     color: '#7f8c8d',
+    marginBottom: 20,
   },
   footer: {
     textAlign: 'center',

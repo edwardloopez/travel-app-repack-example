@@ -8,7 +8,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { LoadingSpinner, useTravelContext } from 'travel-core';
+import { useTravelContext } from 'travel-core';
 
 interface SearchResult {
   id: string;
@@ -103,15 +103,6 @@ const SearchScreen: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <LoadingSpinner />
-        <Text style={styles.loadingText}>Searching travel options...</Text>
-      </View>
-    );
-  }
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>🔍 Travel Search</Text>
@@ -145,10 +136,20 @@ const SearchScreen: React.FC = () => {
           onChangeText={setSearchQuery}
           onSubmitEditing={handleSearch}
         />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Search</Text>
+        <TouchableOpacity
+          style={[styles.searchButton, loading && styles.searchButtonDisabled]}
+          onPress={handleSearch}
+          disabled={loading}
+        >
+          <Text style={styles.searchButtonText}>
+            {loading ? 'Searching...' : 'Search'}
+          </Text>
         </TouchableOpacity>
       </View>
+
+      {loading && (
+        <Text style={styles.searchingText}>Searching travel options...</Text>
+      )}
 
       {results.length > 0 && (
         <View style={styles.resultsContainer}>
@@ -256,9 +257,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
   },
+  searchButtonDisabled: {
+    opacity: 0.7,
+  },
   searchButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  searchingText: {
+    textAlign: 'center',
+    color: '#7f8c8d',
+    marginBottom: 16,
   },
   resultsContainer: {
     marginBottom: 20,
@@ -322,11 +331,6 @@ const styles = StyleSheet.create({
   noResultsSubtext: {
     fontSize: 14,
     color: '#adb5bd',
-  },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#6c757d',
   },
   footer: {
     textAlign: 'center',

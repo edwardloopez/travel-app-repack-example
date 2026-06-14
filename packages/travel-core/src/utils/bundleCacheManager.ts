@@ -1,5 +1,6 @@
 import { ScriptManager } from '@callstack/repack/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect, useState } from 'react';
 import {
   extractPlatformFromUrl,
   extractRemoteNameFromUrl,
@@ -19,6 +20,27 @@ import { retryWithBackoff } from '../utils/retryWithBackoff';
  * and perform cache invalidation based on versions
  */
 
+export type BundleCacheStats = {
+  totalBundles: number;
+  totalSize: number;
+  cacheDisabled: boolean;
+  bundles: Array<{
+    name: string;
+    platform: string;
+    version: string;
+    size: number;
+    url?: string;
+  }>;
+};
+
+type CacheChangeListener = () => void;
+const cacheChangeListeners = new Set<CacheChangeListener>();
+
+/** Called when ScriptManager persists cache metadata to storage. */
+export function notifyBundleCacheChanged(): void {
+  cacheChangeListeners.forEach(listener => listener());
+}
+
 export class BundleCacheManager {
   private static readonly VERSION_PREFIX = 'bundle_version_';
   private static readonly CONTENT_PREFIX = 'bundle_content_';
@@ -26,6 +48,39 @@ export class BundleCacheManager {
   private static readonly SCRIPT_MANAGER_CACHE_KEY = `Repack.ScriptManager.Cache.v4.${
     __DEV__ ? 'debug' : 'release'
   }`;
+
+  static isScriptManagerCacheKey(key: string): boolean {
+    return key.startsWith('Repack.ScriptManager.Cache');
+  }
+
+  /**
+   * Subscribe to ScriptManager cache changes (loads, prefetch, invalidation).
+   */
+  static subscribeToScriptCacheChanges(onChange: () => void): () => void {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const debounced = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
+        onChange();
+      }, 200);
+    };
+
+    cacheChangeListeners.add(debounced);
+
+    const events = ['loaded', 'invalidated'] as const;
+    events.forEach(event => ScriptManager.shared.on(event, debounced));
+
+    return () => {
+      cacheChangeListeners.delete(debounced);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      events.forEach(event => ScriptManager.shared.off(event, debounced));
+    };
+  }
 
   private static parseScriptManagerCacheEntry(
     uniqueId: string,
@@ -125,18 +180,7 @@ export class BundleCacheManager {
   /**
    * Get cache statistics
    */
-  static async getCacheStats(): Promise<{
-    totalBundles: number;
-    totalSize: number;
-    cacheDisabled: boolean;
-    bundles: Array<{
-      name: string;
-      platform: string;
-      version: string;
-      size: number;
-      url?: string;
-    }>;
-  }> {
+  static async getCacheStats(): Promise<BundleCacheStats> {
     try {
       const scriptManagerRaw = await AsyncStorage.getItem(
         this.SCRIPT_MANAGER_CACHE_KEY
@@ -323,4 +367,33 @@ export function useBundleCache() {
     checkForUpdates,
     preloadBundles,
   };
+}
+
+/**
+ * Keeps cache stats in sync with ScriptManager writes and navigation focus.
+ */
+export function useLiveCacheStats(enabled = true) {
+  const [cacheStats, setCacheStats] = useState<BundleCacheStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    try {
+      setCacheStats(await BundleCacheManager.getCacheStats());
+    } catch (error) {
+      console.error('Error loading cache data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    refresh();
+    return BundleCacheManager.subscribeToScriptCacheChanges(refresh);
+  }, [enabled, refresh]);
+
+  return { cacheStats, loading, refresh };
 }

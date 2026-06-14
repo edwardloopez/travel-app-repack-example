@@ -9,116 +9,93 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import { LoadingSpinner, createAPIClient, useTravelContext } from 'travel-core';
+import { useTravelContext } from 'travel-core';
 import {
   toTravelDestination,
   type MockDestination,
 } from './utils/toTravelDestination';
 
+const mockDestinations: MockDestination[] = [
+  {
+    id: '1',
+    name: 'Paris',
+    country: 'France',
+    description:
+      'The City of Light with iconic landmarks and romantic atmosphere',
+    imageUrl:
+      'https://plus.unsplash.com/premium_photo-1718035557075-5111d9d906d2?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    rating: 4.8,
+    price: 1200,
+    category: 'City',
+  },
+  {
+    id: '2',
+    name: 'Bali',
+    country: 'Indonesia',
+    description: 'Tropical paradise with beautiful beaches and rich culture',
+    imageUrl:
+      'https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    rating: 4.6,
+    price: 800,
+    category: 'Beach',
+  },
+  {
+    id: '3',
+    name: 'Tokyo',
+    country: 'Japan',
+    description: 'Modern metropolis blending tradition and innovation',
+    imageUrl:
+      'https://plus.unsplash.com/premium_photo-1661914240950-b0124f20a5c1?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    rating: 4.7,
+    price: 1500,
+    category: 'City',
+  },
+  {
+    id: '4',
+    name: 'Santorini',
+    country: 'Greece',
+    description: 'Stunning island with white buildings and blue domes',
+    imageUrl:
+      'https://plus.unsplash.com/premium_photo-1661964149725-fbf14eabd38c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    rating: 4.9,
+    price: 1000,
+    category: 'Island',
+  },
+  {
+    id: '5',
+    name: 'Swiss Alps',
+    country: 'Switzerland',
+    description: 'Majestic mountains perfect for skiing and hiking',
+    imageUrl:
+      'https://images.unsplash.com/photo-1527668752968-14dc70a27c95?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    rating: 4.5,
+    price: 1800,
+    category: 'Mountain',
+  },
+  {
+    id: '6',
+    name: 'Maldives',
+    country: 'Maldives',
+    description: 'Luxury overwater bungalows in crystal clear waters',
+    imageUrl:
+      'https://images.unsplash.com/photo-1573843981267-be1999ff37cd?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    rating: 4.8,
+    price: 2500,
+    category: 'Beach',
+  },
+];
+
 const DestinationsScreen: React.FC = () => {
   const { setSelectedDestination } = useTravelContext();
-  const [destinations, setDestinations] = useState<MockDestination[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredDestinations, setFilteredDestinations] = useState<
-    MockDestination[]
-  >([]);
-
-  const apiClient = createAPIClient('https://api.travel.com', 'mock-key');
-
-  const mockDestinations: MockDestination[] = [
-    {
-      id: '1',
-      name: 'Paris',
-      country: 'France',
-      description:
-        'The City of Light with iconic landmarks and romantic atmosphere',
-      imageUrl:
-        'https://plus.unsplash.com/premium_photo-1718035557075-5111d9d906d2?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      rating: 4.8,
-      price: 1200,
-      category: 'City',
-    },
-    {
-      id: '2',
-      name: 'Bali',
-      country: 'Indonesia',
-      description: 'Tropical paradise with beautiful beaches and rich culture',
-      imageUrl:
-        'https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      rating: 4.6,
-      price: 800,
-      category: 'Beach',
-    },
-    {
-      id: '3',
-      name: 'Tokyo',
-      country: 'Japan',
-      description: 'Modern metropolis blending tradition and innovation',
-      imageUrl:
-        'https://plus.unsplash.com/premium_photo-1661914240950-b0124f20a5c1?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      rating: 4.7,
-      price: 1500,
-      category: 'City',
-    },
-    {
-      id: '4',
-      name: 'Santorini',
-      country: 'Greece',
-      description: 'Stunning island with white buildings and blue domes',
-      imageUrl:
-        'https://plus.unsplash.com/premium_photo-1661964149725-fbf14eabd38c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      rating: 4.9,
-      price: 1000,
-      category: 'Island',
-    },
-    {
-      id: '5',
-      name: 'Swiss Alps',
-      country: 'Switzerland',
-      description: 'Majestic mountains perfect for skiing and hiking',
-      imageUrl:
-        'https://images.unsplash.com/photo-1527668752968-14dc70a27c95?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      rating: 4.5,
-      price: 1800,
-      category: 'Mountain',
-    },
-    {
-      id: '6',
-      name: 'Maldives',
-      country: 'Maldives',
-      description: 'Luxury overwater bungalows in crystal clear waters',
-      imageUrl:
-        'https://images.unsplash.com/photo-1573843981267-be1999ff37cd?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      rating: 4.8,
-      price: 2500,
-      category: 'Beach',
-    },
-  ];
-
-  const fetchDestinations = async () => {
-    setLoading(true);
-    try {
-      await new Promise<void>(resolve => setTimeout(() => resolve(), 1500));
-      setDestinations(mockDestinations);
-      setFilteredDestinations(mockDestinations);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to fetch destinations. Please try again.');
-      console.error('Destinations API Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDestinations();
-  }, []);
+  const [filteredDestinations, setFilteredDestinations] =
+    useState<MockDestination[]>(mockDestinations);
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      setFilteredDestinations(destinations);
+      setFilteredDestinations(mockDestinations);
     } else {
-      const filtered = destinations.filter(
+      const filtered = mockDestinations.filter(
         destination =>
           destination.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           destination.country
@@ -128,7 +105,7 @@ const DestinationsScreen: React.FC = () => {
       );
       setFilteredDestinations(filtered);
     }
-  }, [searchQuery, destinations]);
+  }, [searchQuery]);
 
   const handleDestinationPress = (destination: MockDestination) => {
     setSelectedDestination(toTravelDestination(destination));
@@ -172,17 +149,6 @@ const DestinationsScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <LoadingSpinner />
-        <Text style={styles.loadingText}>
-          Discovering amazing destinations...
-        </Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>🌍 Travel Destinations</Text>
@@ -223,18 +189,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f8ff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f0f8ff',
-  },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#7f8c8d',
-    fontSize: 16,
   },
   title: {
     fontSize: 24,

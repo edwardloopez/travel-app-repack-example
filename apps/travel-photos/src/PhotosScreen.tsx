@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import { LoadingSpinner } from 'travel-core';
 
 interface PhotoData {
   id: string;
@@ -84,8 +83,6 @@ const { width } = Dimensions.get('window');
 const photoWidth = (width - 40) / 2 - 5;
 
 const PhotosScreen: React.FC = () => {
-  const [photos, setPhotos] = useState<PhotoData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoData | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [filter, setFilter] = useState<string>('all');
@@ -99,26 +96,10 @@ const PhotosScreen: React.FC = () => {
     'wildlife',
   ];
 
-  useEffect(() => {
-    loadPhotos();
-  }, []);
-
-  const loadPhotos = async () => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(() => resolve(undefined), 1000));
-      setPhotos(mockPhotos);
-    } catch (error) {
-      console.error('Photos loading error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const filteredPhotos =
     filter === 'all'
-      ? photos
-      : photos.filter(photo => photo.tags.includes(filter));
+      ? mockPhotos
+      : mockPhotos.filter(photo => photo.tags.includes(filter));
 
   const openPhotoModal = (photo: PhotoData) => {
     setSelectedPhoto(photo);
@@ -166,17 +147,6 @@ const PhotosScreen: React.FC = () => {
       </Text>
     </TouchableOpacity>
   );
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <LoadingSpinner />
-        <Text style={styles.loadingText}>
-          Loading stunning travel photos...
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -431,11 +401,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#7f8c8d',
     fontWeight: '600',
-  },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#7f8c8d',
   },
   footer: {
     textAlign: 'center',

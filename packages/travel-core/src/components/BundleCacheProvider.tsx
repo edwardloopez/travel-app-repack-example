@@ -11,6 +11,10 @@ import {
 } from '../utils/bundleVersioning';
 import { setupTravelScriptResolver } from '../utils/scriptManagerResolver';
 import { mfTrace } from '../utils/mfTrace';
+import {
+  BundleCacheManager,
+  notifyBundleCacheChanged,
+} from '../utils/bundleCacheManager';
 
 interface BundleCacheProviderProps {
   children: React.ReactNode;
@@ -117,6 +121,10 @@ class VersionedBundleStorage {
           sizeKb: Math.round(value.length / 1024),
           destination: 'AsyncStorage-raw',
         });
+      }
+
+      if (BundleCacheManager.isScriptManagerCacheKey(key)) {
+        notifyBundleCacheChanged();
       }
     } catch (error) {
       console.warn('BundleCache: Error writing cache:', error);
