@@ -18,6 +18,7 @@ export { createAPIClient } from './utils/apiClient';
 export { formatCurrency } from './utils/formatters';
 export * from './utils/bundleVersioning';
 export * from './utils/remoteRegistry';
+export { setRemoteRegistryUrl } from './utils/appConfig';
 export { BundleCacheManager, useBundleCache } from './utils/bundleCacheManager';
 export { mfTrace, MF_TRACE_ENABLED } from './utils/mfTrace';
 export { useRemoteBootstrap } from './hooks/useRemoteBootstrap';

@@ -186,6 +186,7 @@ temp/
 webpack-stats.json
 
 # NX
+.nx/
 .nx/cache
 .nx/workspace-data
 

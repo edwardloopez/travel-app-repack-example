@@ -106,9 +106,6 @@ export class BundleCacheManager {
       const versionKeys = allKeys.filter(key =>
         key.startsWith(this.VERSION_PREFIX)
       );
-      const contentKeys = allKeys.filter(key =>
-        key.startsWith(this.CONTENT_PREFIX)
-      );
 
       const bundles = [];
       let totalSize = 0;

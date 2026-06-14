@@ -14,9 +14,9 @@ export async function retryWithBackoff<T>(
       if (attempt === maxAttempts) {
         break;
       }
-      await new Promise(resolve =>
-        setTimeout(resolve, baseDelayMs * attempt)
-      );
+      await new Promise<void>(resolve => {
+        setTimeout(resolve, baseDelayMs * attempt);
+      });
     }
   }
 

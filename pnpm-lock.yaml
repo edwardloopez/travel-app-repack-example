@@ -130,6 +130,9 @@ importers:
       expo:
         specifier: ~53.0.22
         version: 53.0.22(@babel/core@7.28.3)(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0)
+      expo-constants:
+        specifier: ~17.1.7
+        version: 17.1.7(expo@53.0.22(@babel/core@7.28.3)(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0))(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -426,9 +429,18 @@ importers:
         specifier: ^5.0.3
         version: 5.0.7(@types/react@19.1.12)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
     devDependencies:
+      '@react-native/eslint-config':
+        specifier: 0.80.2
+        version: 0.80.2(eslint@8.57.1)(jest@29.7.0(@types/node@22.17.2)(babel-plugin-macros@3.1.0))(prettier@3.6.2)(typescript@5.8.3)
+      '@react-native/typescript-config':
+        specifier: 0.80.2
+        version: 0.80.2
       '@swc/helpers':
         specifier: 0.5.15
         version: 0.5.15
+      '@types/events':
+        specifier: ^3.0.3
+        version: 3.0.3
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
@@ -2169,6 +2181,9 @@ packages:
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
+
+  '@types/events@3.0.3':
+    resolution: {integrity: sha512-trOc4AAUThEz9hapPtSd7wf5tiQKvTtu5b371UxXdTuqzIh0ArcRspRP0i0Viu+LXstIQ1z96t1nsPxT9ol01g==}
 
   '@types/graceful-fs@4.1.9':
     resolution: {integrity: sha512-olP3sd1qOEe5dXTSaFvQG+02VdRXcdytWLAZsAq1PecU8uqQAhkrnbli7DagjtXKW/Bl7YJbUsa8MPcuc8LHEQ==}
@@ -8889,6 +8904,8 @@ snapshots:
       '@types/json-schema': 7.0.15
 
   '@types/estree@1.0.8': {}
+
+  '@types/events@3.0.3': {}
 
   '@types/graceful-fs@4.1.9':
     dependencies:

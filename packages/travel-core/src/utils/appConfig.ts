@@ -1,19 +1,12 @@
 import { LOCAL_REGISTRY_URL } from '../constants/remoteDefaults';
 
-/** Registry URL for prod: expo.extra first, then local default. */
-export function getRemoteRegistryUrl(): string {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Constants = require('expo-constants').default as {
-      expoConfig?: { extra?: { remoteRegistryUrl?: string } };
-    };
-    const fromExtra = Constants.expoConfig?.extra?.remoteRegistryUrl;
-    if (fromExtra) {
-      return fromExtra;
-    }
-  } catch {
-    // expo-constants not available (e.g. remote standalone)
-  }
+let remoteRegistryUrlOverride: string | undefined;
 
-  return LOCAL_REGISTRY_URL;
+/** Host calls this at startup (e.g. from expo-constants). Remotes skip it. */
+export function setRemoteRegistryUrl(url: string | undefined): void {
+  remoteRegistryUrlOverride = url;
+}
+
+export function getRemoteRegistryUrl(): string {
+  return remoteRegistryUrlOverride ?? LOCAL_REGISTRY_URL;
 }

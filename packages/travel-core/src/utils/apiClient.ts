@@ -23,7 +23,7 @@ export const createAPIClient = (
     };
 
     if (apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
+      headers.Authorization = `Bearer ${apiKey}`;
     }
 
     return headers;

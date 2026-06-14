@@ -1,3 +1,4 @@
+import './config/configureProdRegistry';
 import { NavigationContainer } from '@react-navigation/native';
 import React from 'react';
 import { LogBox, StatusBar } from 'react-native';
