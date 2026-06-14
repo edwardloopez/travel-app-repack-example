@@ -9,14 +9,16 @@
     "TravelPhotos": "workspace:*"
   },
   "scripts": {
-    "android": "expo run:android --no-bundler",
+    "android": "expo run:android --device --no-bundler",
     "ios": "expo run:ios --device --no-bundler",
+    "ios:release": "NODE_ENV=production react-native run-ios --mode Release --no-packager",
+    "android:release": "NODE_ENV=production react-native run-android --mode Release --no-packager",
     "start": "react-native start",
     "test": "nx jest:test --passWithNoTests",
     "lint": "nx eslint:lint --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc",
-    "bundle:ios": "react-native bundle --platform ios --entry-file index.ts --dev false",
-    "bundle:android": "react-native bundle --platform android --entry-file index.ts --dev false",
+    "bundle:ios": "NODE_ENV=production react-native webpack-bundle --platform ios --dev false --entry-file index.ts",
+    "bundle:android": "NODE_ENV=production react-native webpack-bundle --platform android --dev false --entry-file index.ts",
     "adbreverse": "adb reverse tcp:8081 tcp:8081 && adb reverse tcp:9000 tcp:9000 && adb reverse tcp:9001 tcp:9001 && adb reverse tcp:9002 tcp:9002 && adb reverse tcp:9003 tcp:9003 && adb reverse tcp:4100 tcp:4100"
   },
   "dependencies": {

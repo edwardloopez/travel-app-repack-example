@@ -1,9 +1,12 @@
 import { ScriptManager } from '@callstack/repack/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  extractPlatformFromUrl,
+  extractRemoteNameFromUrl,
   generateVersionedCacheKey,
   getActiveRemoteConfig,
   getContainerUrl,
+  getRemoteVersion,
   type VersionedRemoteConfig,
 } from '../utils/bundleVersioning';
 import { mfTrace } from '../utils/mfTrace';
@@ -19,6 +22,37 @@ import { retryWithBackoff } from '../utils/retryWithBackoff';
 export class BundleCacheManager {
   private static readonly VERSION_PREFIX = 'bundle_version_';
   private static readonly CONTENT_PREFIX = 'bundle_content_';
+  /** Re.Pack ScriptManager metadata key (bundle files live on native FS). */
+  private static readonly SCRIPT_MANAGER_CACHE_KEY = `Repack.ScriptManager.Cache.v4.${
+    __DEV__ ? 'debug' : 'release'
+  }`;
+
+  private static parseScriptManagerCacheEntry(
+    uniqueId: string,
+    entry: { url?: string }
+  ): {
+    name: string;
+    platform: string;
+    version: string;
+    size: number;
+    url: string;
+  } | null {
+    const url = entry.url;
+    if (!url) {
+      return null;
+    }
+
+    const fromUrl = extractRemoteNameFromUrl(url);
+    const name = fromUrl || uniqueId.split('_').pop() || uniqueId;
+
+    return {
+      name,
+      platform: extractPlatformFromUrl(url),
+      version: getRemoteVersion(name),
+      size: 0,
+      url,
+    };
+  }
 
   /**
    * Invalidate cache for a specific remote and platform
@@ -94,14 +128,40 @@ export class BundleCacheManager {
   static async getCacheStats(): Promise<{
     totalBundles: number;
     totalSize: number;
+    cacheDisabled: boolean;
     bundles: Array<{
       name: string;
       platform: string;
       version: string;
       size: number;
+      url?: string;
     }>;
   }> {
     try {
+      const scriptManagerRaw = await AsyncStorage.getItem(
+        this.SCRIPT_MANAGER_CACHE_KEY
+      );
+
+      if (scriptManagerRaw) {
+        const cache = JSON.parse(scriptManagerRaw) as Record<
+          string,
+          { url?: string }
+        >;
+        const bundles = Object.entries(cache)
+          .map(([uniqueId, entry]) =>
+            this.parseScriptManagerCacheEntry(uniqueId, entry)
+          )
+          .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+
+        return {
+          totalBundles: bundles.length,
+          totalSize: 0,
+          cacheDisabled: __DEV__,
+          bundles,
+        };
+      }
+
+      // Legacy AsyncStorage content keys (unused by Re.Pack ScriptManager).
       const allKeys = await AsyncStorage.getAllKeys();
       const versionKeys = allKeys.filter(key =>
         key.startsWith(this.VERSION_PREFIX)
@@ -137,6 +197,7 @@ export class BundleCacheManager {
       return {
         totalBundles: bundles.length,
         totalSize,
+        cacheDisabled: __DEV__,
         bundles,
       };
     } catch (error) {
@@ -144,6 +205,7 @@ export class BundleCacheManager {
       return {
         totalBundles: 0,
         totalSize: 0,
+        cacheDisabled: __DEV__,
         bundles: [],
       };
     }

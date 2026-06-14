@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import {
   useBundleCache,
-  loadRemoteConfig,
+  applyRemoteConfig,
   useRemoteRegistry,
   getRemoteProfile,
 } from 'travel-core';
@@ -19,11 +19,11 @@ import type { VersionedRemoteConfig } from 'travel-core';
 /**
  * Bundle Cache Debug Screen
  *
- * Provides developer tools for managing bundle cache and versions
- * Only available in development builds
+ * Reads registry/config from RemoteRegistryContext (bootstrap is the fetch).
+ * Pull-to-refresh intentionally re-fetches via refreshRegistry().
  */
 const BundleCacheDebugScreen: React.FC = () => {
-  const { registry } = useRemoteRegistry();
+  const { registry, isReady, refreshRegistry } = useRemoteRegistry();
   const [cacheStats, setCacheStats] = useState<any>(null);
   const [remoteConfig, setRemoteConfig] = useState<VersionedRemoteConfig>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -37,15 +37,16 @@ const BundleCacheDebugScreen: React.FC = () => {
     preloadBundles,
   } = useBundleCache();
 
-  const loadData = async () => {
-    try {
-      const [stats, config] = await Promise.all([
-        getCacheStats(),
-        loadRemoteConfig(),
-      ]);
+  useEffect(() => {
+    if (!registry) {
+      return;
+    }
+    setRemoteConfig(applyRemoteConfig(registry));
+  }, [registry]);
 
-      setCacheStats(stats);
-      setRemoteConfig(config);
+  const loadCacheStats = async () => {
+    try {
+      setCacheStats(await getCacheStats());
     } catch (error) {
       console.error('Error loading cache data:', error);
     } finally {
@@ -55,12 +56,22 @@ const BundleCacheDebugScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!isReady) {
+      return;
+    }
+    loadCacheStats();
+  }, [isReady]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    try {
+      const nextRegistry = await refreshRegistry();
+      setRemoteConfig(applyRemoteConfig(nextRegistry));
+      await loadCacheStats();
+    } catch (error) {
+      console.error('Error refreshing registry:', error);
+      setRefreshing(false);
+    }
   };
 
   const handleInvalidateAll = () => {
@@ -74,7 +85,7 @@ const BundleCacheDebugScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             await invalidateAll();
-            await loadData();
+            await loadCacheStats();
             Alert.alert('Success', 'All cached bundles cleared');
           },
         },
@@ -93,7 +104,7 @@ const BundleCacheDebugScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             await invalidateRemote(remoteName, platform);
-            await loadData();
+            await loadCacheStats();
             Alert.alert('Success', `Cache cleared for ${remoteName}`);
           },
         },
@@ -114,7 +125,7 @@ const BundleCacheDebugScreen: React.FC = () => {
         Alert.alert('No Updates', 'All bundles are up to date');
       }
 
-      await loadData();
+      await loadCacheStats();
     } catch (error) {
       Alert.alert('Error', 'Failed to check for updates');
     }
@@ -126,7 +137,7 @@ const BundleCacheDebugScreen: React.FC = () => {
       await preloadBundles(remoteNames, 'ios', remoteConfig);
 
       Alert.alert('Success', 'Bundles preloaded');
-      await loadData();
+      await loadCacheStats();
     } catch (error) {
       Alert.alert('Error', 'Failed to preload bundles');
     }
@@ -170,9 +181,15 @@ const BundleCacheDebugScreen: React.FC = () => {
             <Text style={styles.statText}>
               Total Bundles: {cacheStats.totalBundles}
             </Text>
-            <Text style={styles.statText}>
-              Total Size: {formatBytes(cacheStats.totalSize)}
-            </Text>
+            {cacheStats.cacheDisabled ? (
+              <Text style={styles.statText}>
+                Cache disabled in dev (__DEV__). Use Release to persist bundles.
+              </Text>
+            ) : (
+              <Text style={styles.statText}>
+                JS files are on device filesystem; sizes are not tracked here.
+              </Text>
+            )}
           </View>
         )}
       </View>
@@ -206,7 +223,12 @@ const BundleCacheDebugScreen: React.FC = () => {
                 {bundle.name} ({bundle.platform})
               </Text>
               <Text style={styles.bundleDetails}>
-                Version: {bundle.version} • Size: {formatBytes(bundle.size)}
+                Version: {bundle.version}
+                {bundle.size > 0
+                  ? ` • Size: ${formatBytes(bundle.size)}`
+                  : bundle.url
+                    ? ` • ${bundle.url}`
+                    : ''}
               </Text>
             </View>
             <TouchableOpacity
@@ -221,7 +243,11 @@ const BundleCacheDebugScreen: React.FC = () => {
         ))}
 
         {(!cacheStats?.bundles || cacheStats.bundles.length === 0) && (
-          <Text style={styles.emptyText}>No cached bundles</Text>
+          <Text style={styles.emptyText}>
+            {cacheStats?.cacheDisabled
+              ? 'No cached bundles in dev. Remotes load from MF dev servers (:9000–9003).'
+              : 'No cached bundles yet. In prod, bootstrap prefetches TravelWeather and TravelSearch; open other remotes to cache them.'}
+          </Text>
         )}
       </View>
 
@@ -231,7 +257,7 @@ const BundleCacheDebugScreen: React.FC = () => {
           <View key={name} style={styles.configItem}>
             <Text style={styles.configName}>{name}</Text>
             <Text style={styles.configDetails}>Version: {config.version}</Text>
-            <Text style={styles.configDetails}>URL: {config.name}</Text>
+            <Text style={styles.configDetails}>URL: {config.url}</Text>
           </View>
         ))}
       </View>

@@ -759,7 +759,10 @@ pnpm adbreverse   # Android físico: 8081, 9000-9003, 4100
 # Prod-like local (release build)
 pnpm build:remotes:ios
 pnpm serve:remotes
-pnpm run:travel-host:ios --configuration Release
+pnpm run:travel-host:ios:release
+
+# `expo run:ios --configuration Release` no sirve aquí: Expo hace exportEager con Metro
+# antes del build nativo y falla en imports federados. Release → `ios:release` (Re.Pack).
 
 # Prod real: app.config.ts → extra.remoteRegistryUrl
 

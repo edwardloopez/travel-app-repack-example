@@ -242,7 +242,11 @@ pnpm start
 # Prod-like local test (release build + static bundles)
 pnpm build:remotes:ios
 pnpm serve:remotes       # :4100
-pnpm run:travel-host:ios --configuration Release
+pnpm run:travel-host:ios:release
+
+# Do NOT use `expo run:ios --configuration Release` — Expo pre-bundles with Metro
+# and cannot resolve federated imports (e.g. TravelPhotos/PhotosScreen).
+# Release uses react-native CLI + Re.Pack (see apps/travel-host/ios/.xcode.env.updates).
 ```
 
 ### 4. **Standalone Mode**
