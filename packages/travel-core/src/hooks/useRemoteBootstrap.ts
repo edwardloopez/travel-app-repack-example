@@ -5,6 +5,7 @@ import { useBundleCache } from '../utils/bundleCacheManager';
 import { applyRemoteConfig } from '../utils/bundleVersioning';
 import { getRemoteProfile, loadRemoteRegistry } from '../utils/remoteRegistry';
 import type { RemoteRegistry } from '../utils/remoteRegistry';
+import { mfTrace } from '../utils/mfTrace';
 
 export interface BootstrapStatus {
   isBootstrapping: boolean;
@@ -37,6 +38,11 @@ export function useRemoteBootstrap(
     let cancelled = false;
 
     const bootstrap = async () => {
+      const bootStartedAt = Date.now();
+      mfTrace('0.bootstrap.start', {
+        profile: getRemoteProfile(),
+        platform: Platform.OS,
+      });
       try {
         const registry = await loadRemoteRegistry(Platform.OS);
         applyRegistry(registry);
@@ -47,6 +53,12 @@ export function useRemoteBootstrap(
         }
 
         const updatedRemotes = await checkForUpdates(config);
+        if (updatedRemotes.length > 0) {
+          mfTrace('3.cache.invalidated', { remotes: updatedRemotes });
+        } else {
+          mfTrace('3.cache.checkForUpdates.ok', { message: 'no invalidations' });
+        }
+
         const profile = registry.profile || getRemoteProfile();
         const enabledRemoteNames = registry.remotes
           .filter(remote => remote.enabled)
@@ -57,10 +69,19 @@ export function useRemoteBootstrap(
 
         // Prefetch uses direct container URLs — only for prod (pre-built bundles).
         if (profile !== 'dev' && preloadTargets.length > 0) {
+          mfTrace('4.prefetch.start', { targets: preloadTargets });
           await preloadBundles(preloadTargets, Platform.OS, config);
+          mfTrace('4.prefetch.done', { targets: preloadTargets });
+        } else {
+          mfTrace('4.prefetch.skipped', { profile, reason: 'dev or no targets' });
         }
 
         if (!cancelled) {
+          mfTrace('0.bootstrap.done', {
+            durationMs: Date.now() - bootStartedAt,
+            profile,
+            preloadedRemotes: profile !== 'dev' ? preloadTargets : [],
+          });
           setStatus({
             isBootstrapping: false,
             isReady: true,
@@ -70,6 +91,10 @@ export function useRemoteBootstrap(
           });
         }
       } catch (error) {
+        mfTrace('0.bootstrap.error', {
+          durationMs: Date.now() - bootStartedAt,
+          error: error instanceof Error ? error.message : String(error),
+        });
         if (!cancelled) {
           setStatus({
             isBootstrapping: false,

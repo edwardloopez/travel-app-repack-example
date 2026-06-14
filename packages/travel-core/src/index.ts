@@ -19,6 +19,7 @@ export { formatCurrency } from './utils/formatters';
 export * from './utils/bundleVersioning';
 export * from './utils/remoteRegistry';
 export { BundleCacheManager, useBundleCache } from './utils/bundleCacheManager';
+export { mfTrace, MF_TRACE_ENABLED } from './utils/mfTrace';
 export { useRemoteBootstrap } from './hooks/useRemoteBootstrap';
 export type { BootstrapStatus } from './hooks/useRemoteBootstrap';
 

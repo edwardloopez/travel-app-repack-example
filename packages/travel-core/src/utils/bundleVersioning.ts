@@ -11,6 +11,7 @@ import {
   loadRemoteRegistry,
   type RemoteRegistry,
 } from './remoteRegistry';
+import { mfTrace } from './mfTrace';
 
 export interface BundleVersion {
   name: string;
@@ -111,6 +112,14 @@ export function remoteConfigFromRegistry(
 export function applyRemoteConfig(registry: RemoteRegistry): VersionedRemoteConfig {
   const config = remoteConfigFromRegistry(registry);
   setActiveRemoteConfig(config);
+  mfTrace('2.remoteConfig.applied', {
+    remotes: Object.values(config).map(c => ({
+      name: c.name,
+      version: c.version,
+      manifestUrl: c.manifestUrl,
+      url: c.url,
+    })),
+  });
   return config;
 }
 

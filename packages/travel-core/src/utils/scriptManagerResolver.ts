@@ -1,6 +1,7 @@
 import { Script, ScriptManager } from '@callstack/repack/client';
 import { Platform } from 'react-native';
 import { getActiveRemoteConfig, getContainerUrl } from './bundleVersioning';
+import { mfTrace } from './mfTrace';
 
 let installed = false;
 
@@ -38,21 +39,35 @@ export function setupTravelScriptResolver() {
 
       if (typeof scriptId === 'string' && scriptId in config) {
         const containerUrl = getContainerUrl(scriptId, platform);
+        mfTrace('7.resolver.container', {
+          scriptId,
+          caller,
+          url: containerUrl,
+          cache: SCRIPT_FETCH_OPTIONS.cache,
+        });
         return remoteScriptLocator(containerUrl);
       }
 
       if (caller && caller in config) {
         if (typeof scriptId === 'string' && /^https?:\/\//.test(scriptId)) {
+          mfTrace('7.resolver.absoluteUrl', { scriptId, caller });
           return remoteScriptLocator(scriptId);
         }
 
         const containerUrl = getContainerUrl(caller, platform);
         if (scriptId === caller) {
+          mfTrace('7.resolver.container', {
+            scriptId,
+            caller,
+            url: containerUrl,
+            cache: SCRIPT_FETCH_OPTIONS.cache,
+          });
           return remoteScriptLocator(containerUrl);
         }
 
         const baseUrl = containerUrl.replace(/\/[^/]+$/, '');
         const chunkUrl = `${baseUrl}/${scriptId}`;
+        mfTrace('7.resolver.chunk', { scriptId, caller, url: chunkUrl });
         return remoteScriptLocator(chunkUrl);
       }
 

@@ -6,6 +6,7 @@ import {
   getContainerUrl,
   type VersionedRemoteConfig,
 } from '../utils/bundleVersioning';
+import { mfTrace } from '../utils/mfTrace';
 import { retryWithBackoff } from '../utils/retryWithBackoff';
 
 /**
@@ -209,14 +210,20 @@ export class BundleCacheManager {
         try {
           const bundleUrl = getContainerUrl(remoteName, platform);
           const startedAt = Date.now();
+          mfTrace('4.prefetch.script.start', { remoteName, bundleUrl });
           await retryWithBackoff(() =>
             ScriptManager.shared.prefetchScript(remoteName)
           );
-          console.log(
-            `BundleCache: Preloaded ${remoteName} in ${Date.now() - startedAt}ms from ${bundleUrl}`
-          );
+          mfTrace('4.prefetch.script.ok', {
+            remoteName,
+            bundleUrl,
+            durationMs: Date.now() - startedAt,
+          });
         } catch (error) {
-          console.warn(`BundleCache: Failed to preload ${remoteName}:`, error);
+          mfTrace('4.prefetch.script.error', {
+            remoteName,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       });
 

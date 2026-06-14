@@ -1,5 +1,5 @@
 import { registerRemotes } from '@module-federation/runtime-tools/runtime';
-import { getRemoteProfile, type RemoteRegistry } from 'travel-core';
+import { getRemoteProfile, mfTrace, type RemoteRegistry } from 'travel-core';
 
 let initialized = false;
 
@@ -26,15 +26,18 @@ export async function initDynamicRemotes(
 
     registerRemotes(remotes, { force: true });
 
-    console.log(
-      `MF Runtime: Registered ${remotes.length} remotes (${profile})`,
-      remotes.map(remote => remote.entry)
-    );
+    mfTrace('2.registerRemotes.done', {
+      count: remotes.length,
+      entries: remotes.map(r => ({ name: r.name, entry: r.entry })),
+    });
   } else {
-    console.log(
-      `MF Runtime: Using build-time remotes (${profile})`,
-      registry.remotes.filter(remote => remote.enabled).map(remote => remote.entry)
-    );
+    mfTrace('2.registerRemotes.skipped', {
+      profile,
+      reason: 'dev uses build-time remotes',
+      entries: registry.remotes
+        .filter(remote => remote.enabled)
+        .map(remote => remote.entry),
+    });
   }
 
   initialized = true;

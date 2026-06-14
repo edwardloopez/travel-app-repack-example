@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { REMOTE_NAMES, REMOTES_CATALOG } from '../constants/remotesCatalog';
 import { DEV_MF_HOST, LOCAL_STATIC_BASE_URL } from '../constants/remoteDefaults';
 import { getRemoteRegistryUrl } from './appConfig';
+import { mfTrace } from './mfTrace';
 
 export type RemoteProfile = 'dev' | 'prod';
 
@@ -126,26 +127,45 @@ export async function loadRemoteRegistry(
   const profile = getRemoteProfile();
 
   if (profile === 'prod') {
+    const registryUrl = getRegistryUrl();
+    mfTrace('1.registry.fetch.start', { url: registryUrl, platform });
+    const startedAt = Date.now();
     try {
-      const response = await fetch(getRegistryUrl());
+      const response = await fetch(registryUrl);
       if (!response.ok) {
         throw new Error(`Registry fetch failed: ${response.status}`);
       }
       const registry = (await response.json()) as RemoteRegistry;
-      return {
+      const resolved = {
         ...registry,
-        profile: 'prod',
+        profile: 'prod' as const,
         remotes: registry.remotes.map(remote => ({
           ...FEATURE_METADATA[remote.name],
           ...remote,
           entry: resolveTemplate(remote.entry, platform),
         })),
       };
+      mfTrace('1.registry.fetch.ok', {
+        durationMs: Date.now() - startedAt,
+        remotes: resolved.remotes.map(r => ({
+          name: r.name,
+          entry: r.entry,
+          version: r.version,
+          enabled: r.enabled,
+        })),
+      });
+      return resolved;
     } catch (error) {
+      mfTrace('1.registry.fetch.fallback', {
+        durationMs: Date.now() - startedAt,
+        error: error instanceof Error ? error.message : String(error),
+      });
       console.warn('Failed to load prod registry, using local fallback:', error);
       return buildProdFallbackRegistry(platform);
     }
   }
+
+  mfTrace('1.registry.dev.inMemory', { platform });
 
   return buildDevRegistry(platform);
 }

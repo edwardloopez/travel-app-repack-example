@@ -11,6 +11,7 @@ import {
   BundleCacheManager,
   ErrorBoundary,
   FederationErrorFallback,
+  mfTrace,
 } from 'travel-core';
 
 export type FederatedModuleLoader = () => Promise<{
@@ -46,7 +47,8 @@ export function createLazyFederatedScreen({
 
     const loadScreen = useCallback(async () => {
       setPhase('loading');
-      console.log(`Loading ${federatedId}...`);
+      const startedAt = Date.now();
+      mfTrace('9.lazyScreen.load.start', { federatedId, remoteName, attempt });
 
       try {
         const module = await loadModule();
@@ -55,19 +57,27 @@ export function createLazyFederatedScreen({
         }
         setScreen(() => module.default);
         setPhase('ready');
-        console.log(`Loaded ${federatedId} successfully`);
+        mfTrace('9.lazyScreen.load.ok', {
+          federatedId,
+          durationMs: Date.now() - startedAt,
+        });
       } catch (error) {
-        console.log(`Failed to load ${federatedId}:`, error);
+        mfTrace('9.lazyScreen.load.error', {
+          federatedId,
+          durationMs: Date.now() - startedAt,
+          error: error instanceof Error ? error.message : String(error),
+        });
         setScreen(null);
         setPhase('error');
       }
-    }, [loadModule]);
+    }, [loadModule, attempt, federatedId, remoteName]);
 
     useEffect(() => {
       loadScreen();
     }, [loadScreen, attempt]);
 
     const handleRetry = async () => {
+      mfTrace('9.lazyScreen.retry', { remoteName, platform: Platform.OS });
       await BundleCacheManager.invalidateRemote(remoteName, Platform.OS);
       setAttempt(current => current + 1);
     };

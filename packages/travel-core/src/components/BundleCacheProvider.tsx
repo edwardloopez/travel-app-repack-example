@@ -10,6 +10,7 @@ import {
   isVersionCompatible,
 } from '../utils/bundleVersioning';
 import { setupTravelScriptResolver } from '../utils/scriptManagerResolver';
+import { mfTrace } from '../utils/mfTrace';
 
 interface BundleCacheProviderProps {
   children: React.ReactNode;
@@ -25,7 +26,6 @@ class VersionedBundleStorage {
 
   async getItem(key: string): Promise<string | null> {
     try {
-      // Extract version from the key/URL if available
       const version = this.resolveVersion(key);
 
       if (version) {
@@ -35,7 +35,6 @@ class VersionedBundleStorage {
           version
         );
 
-        // Check if we have a cached version
         const cachedContent = await AsyncStorage.getItem(
           `${VersionedBundleStorage.CONTENT_PREFIX}${versionedKey}`
         );
@@ -48,21 +47,35 @@ class VersionedBundleStorage {
           cachedVersion &&
           isVersionCompatible(version, cachedVersion)
         ) {
-          console.log(
-            `BundleCache: Cache hit for ${versionedKey} (v${cachedVersion})`
-          );
+          mfTrace('6.storage.getItem.hit', {
+            key: versionedKey,
+            version: cachedVersion,
+            sizeKb: Math.round(cachedContent.length / 1024),
+            source: 'AsyncStorage',
+          });
           return cachedContent;
-        } else if (cachedContent && cachedVersion) {
-          console.log(
-            `BundleCache: Version mismatch for ${versionedKey}. Current: ${version}, Cached: ${cachedVersion}`
-          );
-          // Clean up old version
+        }
+        if (cachedContent && cachedVersion) {
+          mfTrace('6.storage.getItem.versionMismatch', {
+            key: versionedKey,
+            expected: version,
+            cached: cachedVersion,
+          });
           await this.removeItem(key);
+        } else {
+          mfTrace('6.storage.getItem.miss', {
+            key: versionedKey,
+            scriptKey: key.slice(0, 120),
+            willFetch: true,
+          });
         }
       }
 
-      // Fallback to regular key-based storage
-      return await AsyncStorage.getItem(key);
+      const fallback = await AsyncStorage.getItem(key);
+      if (fallback) {
+        mfTrace('6.storage.getItem.hit', { key: key.slice(0, 120), source: 'raw' });
+      }
+      return fallback;
     } catch (error) {
       console.warn('BundleCache: Error reading cache:', error);
       return null;
@@ -91,9 +104,19 @@ class VersionedBundleStorage {
           ),
         ]);
 
-        console.log(`BundleCache: Cached ${versionedKey} (v${version})`);
+        mfTrace('6.storage.setItem.saved', {
+          key: versionedKey,
+          version,
+          sizeKb: Math.round(value.length / 1024),
+          destination: 'AsyncStorage',
+        });
       } else {
         await AsyncStorage.setItem(key, value);
+        mfTrace('6.storage.setItem.saved', {
+          key: key.slice(0, 120),
+          sizeKb: Math.round(value.length / 1024),
+          destination: 'AsyncStorage-raw',
+        });
       }
     } catch (error) {
       console.warn('BundleCache: Error writing cache:', error);
@@ -234,6 +257,10 @@ const BundleCacheProvider: React.FC<BundleCacheProviderProps> = ({
     console.log(
       'BundleCache: Initialized ScriptManager with versioned storage'
     );
+    mfTrace('5.storage.initialized', {
+      cacheEnabled: !__DEV__,
+      message: 'ScriptManager storage adapter mounted',
+    });
 
     versionedStorage.cleanupOldVersions(3);
   }, []);

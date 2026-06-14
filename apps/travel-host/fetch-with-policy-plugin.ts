@@ -24,6 +24,10 @@ export default function (): FederationRuntimePlugin {
         url,
         type: isManifest ? 'manifest' : isContainer ? 'container' : 'asset',
       });
+      console.log('[MF:Trace] 8.fetch.start', {
+        url,
+        type: isManifest ? 'manifest' : isContainer ? 'container' : 'chunk/asset',
+      });
 
       let lastError: unknown;
 
@@ -40,6 +44,12 @@ export default function (): FederationRuntimePlugin {
           }
 
           console.log('MF Fetch complete:', {
+            url,
+            status: response.status,
+            durationMs: Date.now() - startedAt,
+            attempts: attempt,
+          });
+          console.log('[MF:Trace] 8.fetch.ok', {
             url,
             status: response.status,
             durationMs: Date.now() - startedAt,
