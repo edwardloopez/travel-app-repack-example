@@ -6,7 +6,8 @@
   "main": "./index.js",
   "exports": {
     ".": "./index.js",
-    "./lib/remotesCatalog.json": "./lib/remotesCatalog.json"
+    "./lib/remotesCatalog.json": "./lib/remotesCatalog.json",
+    "./lib/remoteVersions.json": "./lib/remoteVersions.json"
   },
   "files": [
     "lib",

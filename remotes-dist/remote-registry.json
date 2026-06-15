@@ -5,7 +5,7 @@
     {
       "name": "TravelWeather",
       "entry": "http://localhost:4100/weather/${platform}/mf-manifest.json",
-      "version": "1.0.1",
+      "version": "0.0.1",
       "enabled": true,
       "exposes": [
         "./App"
@@ -16,7 +16,7 @@
     {
       "name": "TravelDestinations",
       "entry": "http://localhost:4100/destinations/${platform}/mf-manifest.json",
-      "version": "1.0.0",
+      "version": "0.0.1",
       "enabled": true,
       "exposes": [
         "./DestinationsScreen"
@@ -27,7 +27,7 @@
     {
       "name": "TravelSearch",
       "entry": "http://localhost:4100/search/${platform}/mf-manifest.json",
-      "version": "1.0.0",
+      "version": "0.0.1",
       "enabled": true,
       "exposes": [
         "./App"
@@ -38,7 +38,7 @@
     {
       "name": "TravelPhotos",
       "entry": "http://localhost:4100/photos/${platform}/mf-manifest.json",
-      "version": "1.0.0",
+      "version": "0.0.1",
       "enabled": true,
       "exposes": [
         "./PhotosScreen"

@@ -4,6 +4,7 @@
 
 import { Platform } from 'react-native';
 import { REMOTE_NAMES, REMOTES_CATALOG } from '../constants/remotesCatalog';
+import { getCatalogRemoteVersion } from '../constants/remoteVersions';
 import {
   getHostIp,
   getRemoteProfile,
@@ -47,7 +48,7 @@ export function buildRemoteConfig(
   return REMOTE_NAMES.reduce((acc, remoteName) => {
     const baseUrl = resolveRemoteBaseUrl(remoteName, profile);
     acc[remoteName] = {
-      version: REMOTES_CATALOG[remoteName].version,
+      version: getCatalogRemoteVersion(remoteName),
       name: remoteName,
       url: baseUrl,
       manifestUrl: `${baseUrl}/${platform}/mf-manifest.json`,

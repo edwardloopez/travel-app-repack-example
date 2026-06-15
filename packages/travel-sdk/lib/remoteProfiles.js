@@ -4,6 +4,7 @@ import {
   LOCAL_STATIC_BASE_URL,
 } from './remoteDefaults.js';
 import { REMOTE_NAMES, REMOTES_CATALOG } from './remotesCatalog.js';
+import { getRemotePackageVersion } from './remoteVersions.js';
 
 function getHostIp() {
   return DEV_MF_HOST;
@@ -39,7 +40,7 @@ function getRemoteConfigs(profile = getProfile()) {
   return REMOTE_NAMES.reduce((acc, remoteName) => {
     const entry = REMOTES_CATALOG[remoteName];
     acc[remoteName] = {
-      version: entry.version,
+      version: getRemotePackageVersion(remoteName),
       name: remoteName,
       url: resolveRemoteBaseUrl(remoteName, profile),
       slug: entry.slug,
@@ -81,7 +82,7 @@ function buildRegistryJson(profile = getProfile()) {
       return {
         name: remoteName,
         entry: `${baseUrl}/${entry.slug}/\${platform}/mf-manifest.json`,
-        version: entry.version,
+        version: getRemotePackageVersion(remoteName),
         enabled: true,
         exposes: [getRemoteExpose(remoteName)],
         screen: remoteName.replace('Travel', ''),

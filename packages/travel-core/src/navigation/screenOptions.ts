@@ -20,7 +20,6 @@ export function createMicroAppStackScreenOptions(
 ): NativeStackNavigationOptions {
   return {
     headerTintColor: '#fff',
-    headerBackButtonDisplayMode: 'minimal',
     headerStyle: { backgroundColor: accentColor },
     headerTitleStyle: { fontWeight: '600' },
   };

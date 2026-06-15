@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { REMOTES_CATALOG } from '../packages/travel-sdk/lib/remotesCatalog.js';
+import { writeRemoteArtifacts } from '../packages/travel-sdk/lib/writeRemoteArtifacts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -38,24 +39,42 @@ Usage: tsx scripts/build-remotes.ts [platform] [remote...]
   remote     slug, MF name, or app dir — omit to build all
 
 Examples:
-  tsx scripts/build-remotes.ts ios
-  tsx scripts/build-remotes.ts android weather
-  tsx scripts/build-remotes.ts weather search photos
+  pnpm build:remotes:ios
+  pnpm build:remotes:ios -- weather
+  pnpm build:remotes:android -- weather search
   tsx scripts/build-remotes.ts ios TravelWeather TravelSearch
+
+Flags:
+  --no-registry   Skip remote-registry.json generation
 
 Available remotes:
 ${remoteList}
 `);
 }
 
-function parseArgs(argv: string[]): { platform: Platform; selectors: string[] } {
+function parseArgs(argv: string[]): {
+  platform: Platform;
+  selectors: string[];
+  skipRegistry: boolean;
+} {
   let platform: Platform = 'android';
   const selectors: string[] = [];
+  let skipRegistry = false;
 
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') {
       printUsage();
       process.exit(0);
+    }
+
+    if (arg === '--no-registry') {
+      skipRegistry = true;
+      continue;
+    }
+
+    // pnpm/npm pass-through separator (e.g. pnpm build:remotes:ios -- weather)
+    if (arg === '--') {
+      continue;
     }
 
     if (PLATFORMS.includes(arg as Platform)) {
@@ -66,7 +85,7 @@ function parseArgs(argv: string[]): { platform: Platform; selectors: string[] } 
     selectors.push(arg);
   }
 
-  return { platform, selectors };
+  return { platform, selectors, skipRegistry };
 }
 
 function resolveRemote(selector: string): RemoteApp | undefined {
@@ -110,9 +129,15 @@ function resolveRemotes(selectors: string[]): RemoteApp[] {
   return resolved;
 }
 
-const { platform, selectors } = parseArgs(process.argv.slice(2));
+const { platform, selectors, skipRegistry } = parseArgs(process.argv.slice(2));
 const remotesToBuild = resolveRemotes(selectors);
 const codeSigningKeyPath = path.join(rootDir, 'code-signing.pem');
+
+function generateRegistry() {
+  const { registryPath, versionsPath } = writeRemoteArtifacts(rootDir);
+  console.log(`Generated ${registryPath}`);
+  console.log(`Generated ${versionsPath}`);
+}
 
 if (!fs.existsSync(codeSigningKeyPath)) {
   console.error('\nMissing code-signing.pem. Run: pnpm setup:code-signing\n');
@@ -165,3 +190,8 @@ for (const remote of remotesToBuild) {
 console.log(
   `\nDone. Built ${remotesToBuild.length} remote(s) for ${platform}.`
 );
+
+if (!skipRegistry) {
+  console.log('');
+  generateRegistry();
+}

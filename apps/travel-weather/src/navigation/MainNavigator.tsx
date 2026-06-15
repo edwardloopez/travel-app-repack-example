@@ -48,6 +48,7 @@ const MainNavigator: React.FC = () => {
             return (
               <HeaderBackButton
                 {...headerProps}
+                displayMode='minimal'
                 onPress={() => parent.goBack()}
               />
             );

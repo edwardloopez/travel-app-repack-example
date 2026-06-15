@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { REMOTE_NAMES, REMOTES_CATALOG } from '../constants/remotesCatalog';
+import { getCatalogRemoteVersion } from '../constants/remoteVersions';
 import { DEV_MF_HOST, LOCAL_STATIC_BASE_URL } from '../constants/remoteDefaults';
 import { getRemoteRegistryUrl } from './appConfig';
 import { mfTrace } from './mfTrace';
@@ -95,7 +96,7 @@ function buildDevRegistry(platform: string): RemoteRegistry {
     remotes: REMOTE_NAMES.map(name => ({
       name,
       entry: `http://${host}:${REMOTES_CATALOG[name].devPort}/${platform}/mf-manifest.json`,
-      version: REMOTES_CATALOG[name].version,
+      version: getCatalogRemoteVersion(name),
       enabled: true,
       ...FEATURE_METADATA[name],
       startCommand: `pnpm start:travel-${REMOTES_CATALOG[name].slug}`,
@@ -113,7 +114,7 @@ function buildProdFallbackRegistry(platform: string): RemoteRegistry {
     remotes: REMOTE_NAMES.map(name => ({
       name,
       entry: `${baseUrl}/${REMOTES_CATALOG[name].slug}/${platform}/mf-manifest.json`,
-      version: REMOTES_CATALOG[name].version,
+      version: getCatalogRemoteVersion(name),
       enabled: true,
       ...FEATURE_METADATA[name],
       startCommand: `pnpm serve:remotes`,
