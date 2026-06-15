@@ -263,10 +263,10 @@ REMOTE (eager: false)
 
 ### 3.3 Exposes: qué puede importar el host
 
-Cada remote define qué expone en su `rspack.config.mts`:
+Cada remote define qué expone en su `rspack.config.ts`:
 
 ```typescript
-// apps/travel-weather/rspack.config.mts
+// apps/travel-weather/rspack.config.ts
 exposes: {
   './WeatherScreen': './src/WeatherScreen',
 }
@@ -532,8 +532,8 @@ El host lee config del backend con versión por segmento de usuario.
 
 ### Semana 2 — Configuración
 
-- [ ] Estudiar `apps/travel-host/rspack.config.mts`
-- [ ] Estudiar `apps/travel-weather/rspack.config.mts`
+- [ ] Estudiar `apps/travel-host/rspack.config.ts`
+- [ ] Estudiar `apps/travel-weather/rspack.config.ts`
 - [ ] Modificar un `expose` y consumirlo desde el host
 - [ ] Cambiar una versión en `dependencies.json` y observar el efecto
 - [ ] Probar en simulador (dev usa `localhost`)
@@ -653,7 +653,7 @@ Antes de implementar micro-apps en producción, responde:
 | `packages/travel-sdk/lib/remotesCatalog.json` | Catálogo único: slug, devPort, version por remote |
 | `packages/travel-sdk/lib/remoteProfiles.ts` | Modos dev/prod (NODE_ENV) y registry JSON |
 | `apps/travel-host/app.config.ts` | Config Expo (prebuild); `.env` para runtime |
-| `apps/travel-host/rspack.config.mts` | Entry host + `dotenv` + plugins MF |
+| `apps/travel-host/rspack.config.ts` | Entry host + `dotenv` + plugins MF |
 | `apps/travel-host/src/federation/createLazyFederatedScreen.tsx` | Carga lazy + fallback + retry |
 | `apps/travel-host/src/federation/initRemotes.ts` | `registerRemotes` solo en `prod` |
 | `packages/travel-core/src/utils/remoteRegistry.ts` | Catálogo de remotes por perfil |

@@ -122,7 +122,7 @@ The enhanced plugin provides:
 travel-app-repack-example/
 ├── 📱 apps/                          # Micro-frontend applications
 │   ├── travel-host/                  # Main host app (Port: 8081)
-│   │   ├── rspack.config.mts         # MF V2 host (runtime remotes)
+│   │   ├── rspack.config.ts         # MF V2 host (runtime remotes)
 │   │   └── src/federation/           # Dynamic remote registration
 │   ├── travel-weather/               # Weather MF (Port: 9000)
 │   ├── travel-destinations/          # Destinations MF (Port: 9001)
@@ -264,7 +264,7 @@ pnpm start:standalone:travel-weather
 ### 1. **Module Federation V2 Host Configuration**
 
 ```typescript
-// apps/travel-host/rspack.config.mts — remotes registered at runtime
+// apps/travel-host/rspack.config.ts — remotes registered at runtime
 new Repack.plugins.ModuleFederationPluginV2({
   name: 'TravelHost',
   dts: false,
@@ -280,7 +280,7 @@ registerRemotes(registry.remotes); // from remote-registry.json or dev config
 ### 2. **Module Federation V2 Remote Configuration**
 
 ```typescript
-// apps/travel-weather/rspack.config.mts
+// apps/travel-weather/rspack.config.ts
 new Repack.plugins.ModuleFederationPluginV2({
   name: 'TravelWeather',
   filename: 'TravelWeather.container.js.bundle',

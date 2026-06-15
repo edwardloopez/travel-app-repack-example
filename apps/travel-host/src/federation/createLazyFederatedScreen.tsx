@@ -11,6 +11,7 @@ import {
   BundleCacheManager,
   ErrorBoundary,
   FederationErrorFallback,
+  getRemoteVersion,
   mfTrace,
 } from 'travel-core';
 
@@ -84,6 +85,11 @@ export function createLazyFederatedScreen({
         }
         setScreen(() => module.default);
         setPhase('ready');
+        await BundleCacheManager.setInstalledVersion(
+          remoteName,
+          Platform.OS,
+          getRemoteVersion(remoteName)
+        );
         mfTrace('9.lazyScreen.load.ok', {
           federatedId,
           durationMs: Date.now() - startedAt,

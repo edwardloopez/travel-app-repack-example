@@ -118,7 +118,7 @@ coverage/
 # nyc test coverage
 .nyc_output
 
-# TypeScript
+packages/travel-sdk/dist/
 *.tsbuildinfo
 .tsbuildinfo
 # Accidental tsc output next to sources (all packages use noEmit now)

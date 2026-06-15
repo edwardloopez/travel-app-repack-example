@@ -2,6 +2,7 @@ import React from 'react';
 import { HeaderBackButton } from '@react-navigation/elements';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { createMicroAppStackScreenOptions } from 'travel-core';
 import WeatherScreen from '../WeatherScreen';
 import { LazyScreen } from '../components/LazyScreen';
 
@@ -32,11 +33,7 @@ const ForecastScreen = (props: ForecastProps) => (
 const MainNavigator: React.FC = () => {
   return (
     <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: '#3498db' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '600' },
-      }}
+      screenOptions={createMicroAppStackScreenOptions('#3498db')}
     >
       <Stack.Screen
         name="WeatherHome"

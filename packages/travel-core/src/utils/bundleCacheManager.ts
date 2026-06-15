@@ -49,10 +49,45 @@ export function notifyBundleCacheChanged(): void {
 export class BundleCacheManager {
   private static readonly VERSION_PREFIX = 'bundle_version_';
   private static readonly CONTENT_PREFIX = 'bundle_content_';
-  /** Re.Pack ScriptManager metadata key (bundle files live on native FS). */
+  private static readonly INSTALLED_VERSION_PREFIX = 'bundle_installed_';
+  /**
+   * Re.Pack ScriptManager metadata key (bundle files live on native FS).
+   * */
   private static readonly SCRIPT_MANAGER_CACHE_KEY = `Repack.ScriptManager.Cache.v4.${
     __DEV__ ? 'debug' : 'release'
   }`;
+
+  private static installedVersionKey(
+    remoteName: string,
+    platform: string
+  ): string {
+    return `${this.INSTALLED_VERSION_PREFIX}${remoteName}_${platform}`;
+  }
+
+  static async getInstalledVersion(
+    remoteName: string,
+    platform: string
+  ): Promise<string | null> {
+    return AsyncStorage.getItem(this.installedVersionKey(remoteName, platform));
+  }
+
+  static async setInstalledVersion(
+    remoteName: string,
+    platform: string,
+    version: string
+  ): Promise<void> {
+    await AsyncStorage.setItem(
+      this.installedVersionKey(remoteName, platform),
+      version
+    );
+  }
+
+  private static async clearInstalledVersion(
+    remoteName: string,
+    platform: string
+  ): Promise<void> {
+    await AsyncStorage.removeItem(this.installedVersionKey(remoteName, platform));
+  }
 
   static isScriptManagerCacheKey(key: string): boolean {
     return key.startsWith('Repack.ScriptManager.Cache');
@@ -91,10 +126,10 @@ export class BundleCacheManager {
     };
   }
 
-  private static parseScriptManagerCacheEntry(
+  private static async parseScriptManagerCacheEntry(
     uniqueId: string,
     entry: { url?: string }
-  ): BundleCacheStats['bundles'][number] | null {
+  ): Promise<BundleCacheStats['bundles'][number] | null> {
     const url = entry.url;
     if (!url) {
       return null;
@@ -108,13 +143,20 @@ export class BundleCacheManager {
       : url.includes('.chunk.bundle') || url.includes('__federation_expose_')
         ? 'chunk'
         : 'unknown';
+    const platform = extractPlatformFromUrl(url);
+    const installedVersion =
+      remoteName != null
+        ? await this.getInstalledVersion(remoteName, platform)
+        : null;
 
     return {
       uniqueId,
       name,
       kind,
-      platform: extractPlatformFromUrl(url),
-      version: remoteName ? getRemoteVersion(remoteName) : 'unknown',
+      platform,
+      version:
+        installedVersion ??
+        (remoteName ? getRemoteVersion(remoteName) : 'unknown'),
       size: 0,
       url,
     };
@@ -201,6 +243,8 @@ export class BundleCacheManager {
         }
       }
 
+      await this.clearInstalledVersion(remoteName, platform);
+
       const cache = await this.readScriptManagerCache();
       const scriptIds = this.findScriptIdsForRemote(cache, remoteName, platform);
       await this.invalidateCacheEntries(scriptIds);
@@ -224,7 +268,8 @@ export class BundleCacheManager {
       const bundleKeys = allKeys.filter(
         key =>
           key.startsWith(this.CONTENT_PREFIX) ||
-          key.startsWith(this.VERSION_PREFIX)
+          key.startsWith(this.VERSION_PREFIX) ||
+          key.startsWith(this.INSTALLED_VERSION_PREFIX)
       );
 
       if (bundleKeys.length > 0) {
@@ -256,11 +301,13 @@ export class BundleCacheManager {
           string,
           { url?: string }
         >;
-        const bundles = Object.entries(cache)
-          .map(([uniqueId, entry]) =>
-            this.parseScriptManagerCacheEntry(uniqueId, entry)
+        const bundles = (
+          await Promise.all(
+            Object.entries(cache).map(([uniqueId, entry]) =>
+              this.parseScriptManagerCacheEntry(uniqueId, entry)
+            )
           )
-          .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+        ).filter((entry): entry is NonNullable<typeof entry> => entry != null);
 
         return {
           totalBundles: bundles.length,
@@ -331,27 +378,42 @@ export class BundleCacheManager {
     const updatedRemotes: string[] = [];
 
     try {
+      const scriptManagerCache = await this.readScriptManagerCache();
+
       for (const [remoteName, config] of Object.entries(remoteConfig)) {
         const platforms = ['ios', 'android'];
 
         for (const platform of platforms) {
-          const cacheKey = generateVersionedCacheKey(
+          const installedVersion = await this.getInstalledVersion(
+            remoteName,
+            platform
+          );
+          const hasScriptManagerEntries =
+            this.findScriptIdsForRemote(
+              scriptManagerCache,
+              remoteName,
+              platform
+            ).length > 0;
+
+          const needsInvalidation =
+            hasScriptManagerEntries &&
+            installedVersion !== config.version;
+
+          if (!needsInvalidation) {
+            continue;
+          }
+
+          await this.invalidateRemote(remoteName, platform);
+          updatedRemotes.push(`${remoteName}@${platform}`);
+          mfTrace('3.cache.versionMismatch', {
             remoteName,
             platform,
-            config.version
+            installedVersion,
+            registryVersion: config.version,
+          });
+          console.log(
+            `BundleCache: Detected update for ${remoteName} (${installedVersion} → ${config.version})`
           );
-          const cachedVersion = await AsyncStorage.getItem(
-            `${this.VERSION_PREFIX}${cacheKey}`
-          );
-
-          if (cachedVersion && cachedVersion !== config.version) {
-            // Version mismatch - invalidate old cache
-            await this.invalidateRemote(remoteName, platform, cachedVersion);
-            updatedRemotes.push(`${remoteName}@${platform}`);
-            console.log(
-              `BundleCache: Detected update for ${remoteName} (${cachedVersion} → ${config.version})`
-            );
-          }
         }
       }
     } catch (error) {
@@ -384,9 +446,15 @@ export class BundleCacheManager {
           await retryWithBackoff(() =>
             ScriptManager.shared.prefetchScript(remoteName)
           );
+          await this.setInstalledVersion(
+            remoteName,
+            platform,
+            config.version
+          );
           mfTrace('4.prefetch.script.ok', {
             remoteName,
             bundleUrl,
+            version: config.version,
             durationMs: Date.now() - startedAt,
           });
         } catch (error) {

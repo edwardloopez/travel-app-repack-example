@@ -5,7 +5,7 @@
     {
       "name": "TravelWeather",
       "entry": "http://localhost:4100/weather/${platform}/mf-manifest.json",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "enabled": true,
       "exposes": [
         "./App"

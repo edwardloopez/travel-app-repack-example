@@ -1,5 +1,5 @@
 import { ExpoModulesPlugin } from '@callstack/repack-plugin-expo-modules';
-import { createHostRspackConfig } from 'travel-sdk/lib/createRspackConfig.ts';
+import { createHostRspackConfig } from 'travel-sdk';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as dotenv from 'dotenv';

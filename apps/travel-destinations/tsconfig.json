@@ -8,9 +8,9 @@
     "types": ["node"],
     "paths": {
       "travel-core": ["../../packages/travel-core/src"],
-      "travel-sdk/lib/*": ["../../packages/travel-sdk/lib/*"]
+      "travel-sdk": ["../../packages/travel-sdk/index.js"]
     }
   },
-  "include": ["src/**/*", "index.js", "rspack.config.mts"],
+  "include": ["src/**/*", "index.js", "rspack.config.ts"],
   "exclude": ["node_modules", "android", "ios"]
 }

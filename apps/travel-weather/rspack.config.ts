@@ -1,4 +1,4 @@
-import { createRemoteRspackConfig } from 'travel-sdk/lib/createRspackConfig.ts';
+import { createRemoteRspackConfig } from 'travel-sdk';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -6,10 +6,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default createRemoteRspackConfig({
   dirname: __dirname,
-  appName: 'travel-photos',
-  mfName: 'TravelPhotos',
+  appName: 'travel-weather',
+  mfName: 'TravelWeather',
   entry: './index.js',
   exposes: {
-    './PhotosScreen': './src/PhotosScreen',
+    './App': './src/navigation/MainNavigator',
   },
 });
