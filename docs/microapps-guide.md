@@ -723,7 +723,7 @@ RemoteBootstrapGate
  └─ useRemoteBootstrap(initDynamicRemotes)
       ├─ refreshRegistry()                             ← fetch o dev registry
       ├─ applyRemoteConfig(registry)                   ← URLs/versiones activas
-      ├─ initDynamicRemotes(platform, registry)        ← registerRemotes solo prod
+      ├─ initDynamicRemotes(registry)                  ← registerRemotes solo prod
       ├─ checkForUpdates(config)                       ← invalida si versión instalada ≠ registry
       └─ preloadBundles()                              ← solo prod; marca versión instalada
 ```

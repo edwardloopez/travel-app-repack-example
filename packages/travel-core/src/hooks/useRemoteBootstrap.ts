@@ -19,10 +19,7 @@ export interface BootstrapStatus {
 const PRELOAD_REMOTES = ['TravelWeather', 'TravelSearch'];
 
 export function useRemoteBootstrap(
-  initDynamicRemotes?: (
-    platform: string,
-    registry: RemoteRegistry
-  ) => Promise<void>
+  initDynamicRemotes?: (registry: RemoteRegistry) => Promise<void>
 ) {
   const { refreshRegistry, isReady } = useRemoteRegistry();
   const { checkForUpdates, preloadBundles } = useBundleCache();
@@ -48,7 +45,7 @@ export function useRemoteBootstrap(
         const config = applyRemoteConfig(registry);
 
         if (initDynamicRemotes) {
-          await initDynamicRemotes(Platform.OS, registry);
+          await initDynamicRemotes(registry);
         }
 
         const updatedRemotes = await checkForUpdates(config);

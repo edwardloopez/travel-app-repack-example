@@ -3,10 +3,7 @@ import { getRemoteProfile, mfTrace, type RemoteRegistry } from 'travel-core';
 
 let initialized = false;
 
-export async function initDynamicRemotes(
-  _platform: string,
-  registry: RemoteRegistry
-) {
+export async function initDynamicRemotes(registry: RemoteRegistry) {
   if (initialized) {
     return;
   }
