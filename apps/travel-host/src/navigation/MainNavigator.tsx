@@ -27,7 +27,7 @@ const MainNavigator: React.FC = () => {
           backgroundColor: '#2196F3',
         },
       }}
-      >
+    >
       <Stack.Screen
         name="Home"
         component={HomeScreen}
@@ -36,22 +36,30 @@ const MainNavigator: React.FC = () => {
       <Stack.Screen
         name="Weather"
         component={LazyWeatherScreen}
-        options={{ title: 'Weather' }}
+        options={{
+          title: 'Weather',
+        }}
       />
       <Stack.Screen
         name="Destinations"
         component={LazyDestinationsScreen}
-        options={{ title: 'Destinations' }}
+        options={{
+          title: 'Destinations',
+        }}
       />
       <Stack.Screen
         name="Search"
         component={LazySearchScreen}
-        options={{ title: 'Search Flights & Hotels' }}
+        options={{
+          title: 'Search Flights & Hotels',
+        }}
       />
       <Stack.Screen
         name="Photos"
         component={LazyPhotosScreen}
-        options={{ title: 'Travel Photos' }}
+        options={{
+          title: 'Travel Photos',
+        }}
       />
     </Stack.Navigator>
   );

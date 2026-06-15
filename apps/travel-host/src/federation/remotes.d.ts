@@ -1,3 +1,9 @@
+declare module 'TravelWeather/App' {
+  import type { ComponentType } from 'react';
+  const App: ComponentType;
+  export default App;
+}
+
 declare module 'TravelWeather/WeatherScreen' {
   import type { ComponentType } from 'react';
   const WeatherScreen: ComponentType;
@@ -8,6 +14,12 @@ declare module 'TravelDestinations/DestinationsScreen' {
   import type { ComponentType } from 'react';
   const DestinationsScreen: ComponentType;
   export default DestinationsScreen;
+}
+
+declare module 'TravelSearch/App' {
+  import type { ComponentType } from 'react';
+  const App: ComponentType;
+  export default App;
 }
 
 declare module 'TravelSearch/SearchScreen' {

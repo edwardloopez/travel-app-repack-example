@@ -19,6 +19,14 @@ const REMOTE_APPS = [
 ];
 
 const platform = process.argv[2] || 'android';
+const codeSigningKeyPath = path.join(rootDir, 'code-signing.pem');
+
+if (!fs.existsSync(codeSigningKeyPath)) {
+  console.error(
+    '\nMissing code-signing.pem. Run: pnpm setup:code-signing\n'
+  );
+  process.exit(1);
+}
 
 function copyDist(appDir, slug) {
   const sourceDir = path.join(rootDir, 'apps', appDir, 'build', 'generated', platform);

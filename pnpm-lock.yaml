@@ -282,6 +282,12 @@ importers:
       '@module-federation/enhanced':
         specifier: 0.13.1
         version: 0.13.1(@rspack/core@1.4.11(@swc/helpers@0.5.15))(react-dom@19.1.1(react@19.1.0))(react@19.1.0)(typescript@5.8.3)(webpack@5.101.2)
+      '@react-navigation/native':
+        specifier: ^7.1.17
+        version: 7.1.17(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0)
+      '@react-navigation/native-stack':
+        specifier: ^7.3.25
+        version: 7.3.25(@react-navigation/native@7.1.17(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0))(react-native-safe-area-context@5.4.0(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0))(react-native-screens@4.12.0(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0))(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -297,6 +303,9 @@ importers:
       react-native-safe-area-context:
         specifier: 5.4.0
         version: 5.4.0(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0)
+      react-native-screens:
+        specifier: ~4.12.0
+        version: 4.12.0(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0)
       travel-core:
         specifier: workspace:*
         version: link:../../packages/travel-core
@@ -349,6 +358,12 @@ importers:
       '@module-federation/enhanced':
         specifier: 0.13.1
         version: 0.13.1(@rspack/core@1.4.11(@swc/helpers@0.5.15))(react-dom@19.1.1(react@19.1.0))(react@19.1.0)(typescript@5.8.3)(webpack@5.101.2)
+      '@react-navigation/native':
+        specifier: ^7.1.17
+        version: 7.1.17(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0)
+      '@react-navigation/native-stack':
+        specifier: ^7.3.25
+        version: 7.3.25(@react-navigation/native@7.1.17(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0))(react-native-safe-area-context@5.4.0(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0))(react-native-screens@4.12.0(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0))(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -361,6 +376,9 @@ importers:
       react-native-safe-area-context:
         specifier: 5.4.0
         version: 5.4.0(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0)
+      react-native-screens:
+        specifier: ~4.12.0
+        version: 4.12.0(react-native@0.80.2(@babel/core@7.28.3)(@react-native-community/cli@15.0.1(typescript@5.8.3))(@types/react@19.1.12)(react@19.1.0))(react@19.1.0)
       travel-core:
         specifier: workspace:*
         version: link:../../packages/travel-core

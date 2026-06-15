@@ -96,6 +96,9 @@ export function createRemoteRspackConfig({
   entry,
   exposes,
 }) {
+  const repoRoot = path.resolve(dirname, '../..');
+  const codeSigningKeyPath = path.join(repoRoot, 'code-signing.pem');
+
   const config = Repack.defineRspackConfig(({ mode }) => ({
     mode,
     context: dirname,
@@ -144,6 +147,10 @@ export function createRemoteRspackConfig({
         enabled: mode === 'production',
         test: /\.(js)?bundle$/,
         exclude: /index.bundle$/,
+      }),
+      new Repack.plugins.CodeSigningPlugin({
+        enabled: mode === 'production',
+        privateKeyPath: codeSigningKeyPath,
       }),
     ],
   }));

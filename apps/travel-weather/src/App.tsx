@@ -1,14 +1,17 @@
 import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TravelProvider, ThemeProvider } from 'travel-core';
-import WeatherScreen from './WeatherScreen';
+import MainNavigator from './navigation/MainNavigator';
 
 const App: React.FC = () => {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
         <TravelProvider>
-          <WeatherScreen />
+          <NavigationContainer>
+            <MainNavigator />
+          </NavigationContainer>
         </TravelProvider>
       </ThemeProvider>
     </SafeAreaProvider>

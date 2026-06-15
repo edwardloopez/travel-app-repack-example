@@ -2,8 +2,8 @@ import { createLazyFederatedScreen } from '../federation/createLazyFederatedScre
 
 export default createLazyFederatedScreen({
   remoteName: 'TravelSearch',
-  loadModule: () => import('TravelSearch/SearchScreen'),
-  moduleName: 'SearchScreen',
+  loadModule: () => import('TravelSearch/App'),
+  moduleName: 'App',
   loadingLabel: 'Search',
   fallbackTitle: 'Search Service',
   fallbackIcon: '🔍',

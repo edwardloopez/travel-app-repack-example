@@ -35,6 +35,7 @@ const BundleCacheDebugScreen: React.FC = () => {
 
   const {
     invalidateRemote,
+    invalidateCacheEntry,
     invalidateAll,
     checkForUpdates,
     preloadBundles,
@@ -79,23 +80,18 @@ const BundleCacheDebugScreen: React.FC = () => {
     );
   };
 
-  const handleInvalidateRemote = (remoteName: string, platform: string) => {
-    Alert.alert(
-      'Clear Remote Cache',
-      `Clear cache for ${remoteName} (${platform})?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            await invalidateRemote(remoteName, platform);
-            await refreshCacheStats();
-            Alert.alert('Success', `Cache cleared for ${remoteName}`);
-          },
+  const handleInvalidateCacheEntry = (uniqueId: string, label: string) => {
+    Alert.alert('Clear cached bundle', `Remove "${label}" from cache?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: async () => {
+          await invalidateCacheEntry(uniqueId);
+          await refreshCacheStats();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleCheckUpdates = async () => {
@@ -202,11 +198,11 @@ const BundleCacheDebugScreen: React.FC = () => {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Cached Bundles</Text>
-        {cacheStats?.bundles.map((bundle: any, index: number) => (
-          <View key={index} style={styles.bundleItem}>
+        {cacheStats?.bundles.map(bundle => (
+          <View key={bundle.uniqueId} style={styles.bundleItem}>
             <View style={styles.bundleInfo}>
               <Text style={styles.bundleName}>
-                {bundle.name} ({bundle.platform})
+                {bundle.name} ({bundle.platform}) · {bundle.kind}
               </Text>
               <Text style={styles.bundleDetails}>
                 Version: {bundle.version}
@@ -220,7 +216,10 @@ const BundleCacheDebugScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.clearButton}
               onPress={() =>
-                handleInvalidateRemote(bundle.name, bundle.platform)
+                handleInvalidateCacheEntry(
+                  bundle.uniqueId,
+                  `${bundle.name} (${bundle.kind})`
+                )
               }
             >
               <Text style={styles.clearButtonText}>Clear</Text>

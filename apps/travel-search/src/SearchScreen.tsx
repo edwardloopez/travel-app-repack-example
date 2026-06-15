@@ -9,14 +9,15 @@ import {
   Alert,
 } from 'react-native';
 import { useTravelContext } from 'travel-core';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { SearchStackParamList } from './navigation/MainNavigator';
+import type { SearchResult } from './types';
 
-interface SearchResult {
-  id: string;
-  title: string;
-  type: 'flight' | 'hotel' | 'destination';
-  description: string;
-  price?: string;
-}
+type SearchNavigation = NativeStackNavigationProp<
+  SearchStackParamList,
+  'SearchHome'
+>;
 
 const mockResults: SearchResult[] = [
   {
@@ -42,6 +43,7 @@ const mockResults: SearchResult[] = [
 ];
 
 const SearchScreen: React.FC = () => {
+  const navigation = useNavigation<SearchNavigation>();
   const { selectedDestination } = useTravelContext();
   const [searchQuery, setSearchQuery] = useState(
     selectedDestination?.name || ''
@@ -157,7 +159,11 @@ const SearchScreen: React.FC = () => {
             {results.length} result(s) found
           </Text>
           {results.map(result => (
-            <View key={result.id} style={styles.resultCard}>
+            <TouchableOpacity
+              key={result.id}
+              style={styles.resultCard}
+              onPress={() => navigation.navigate('SearchDetail', { result })}
+            >
               <View style={styles.resultHeader}>
                 <Text style={styles.resultIcon}>
                   {getTypeIcon(result.type)}
@@ -172,7 +178,7 @@ const SearchScreen: React.FC = () => {
                   <Text style={styles.resultPrice}>{result.price}</Text>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}

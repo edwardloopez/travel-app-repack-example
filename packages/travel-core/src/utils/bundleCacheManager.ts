@@ -3,11 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import {
   extractPlatformFromUrl,
-  extractRemoteNameFromUrl,
   generateVersionedCacheKey,
   getActiveRemoteConfig,
   getContainerUrl,
   getRemoteVersion,
+  resolveRemoteNameFromCacheUrl,
   type VersionedRemoteConfig,
 } from '../utils/bundleVersioning';
 import { mfTrace } from '../utils/mfTrace';
@@ -25,7 +25,9 @@ export type BundleCacheStats = {
   totalSize: number;
   cacheDisabled: boolean;
   bundles: Array<{
+    uniqueId: string;
     name: string;
+    kind: 'container' | 'chunk' | 'unknown';
     platform: string;
     version: string;
     size: number;
@@ -70,43 +72,97 @@ export class BundleCacheManager {
 
     cacheChangeListeners.add(debounced);
 
+    const manager = ScriptManager.shared as typeof ScriptManager.shared & {
+      on(event: 'loaded' | 'invalidated', handler: () => void): void;
+      off(event: 'loaded' | 'invalidated', handler: () => void): void;
+    };
     const events = ['loaded', 'invalidated'] as const;
-    events.forEach(event => ScriptManager.shared.on(event, debounced));
+    events.forEach(event => manager.on(event, debounced));
 
     return () => {
       cacheChangeListeners.delete(debounced);
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      events.forEach(event => ScriptManager.shared.off(event, debounced));
+      events.forEach(event => manager.off(event, debounced));
     };
   }
 
   private static parseScriptManagerCacheEntry(
     uniqueId: string,
     entry: { url?: string }
-  ): {
-    name: string;
-    platform: string;
-    version: string;
-    size: number;
-    url: string;
-  } | null {
+  ): BundleCacheStats['bundles'][number] | null {
     const url = entry.url;
     if (!url) {
       return null;
     }
 
-    const fromUrl = extractRemoteNameFromUrl(url);
-    const name = fromUrl || uniqueId.split('_').pop() || uniqueId;
+    const remoteName = resolveRemoteNameFromCacheUrl(url);
+    const name =
+      remoteName || uniqueId.split('_').pop() || uniqueId;
+    const kind = url.includes('.container.js.bundle')
+      ? 'container'
+      : url.includes('.chunk.bundle') || url.includes('__federation_expose_')
+        ? 'chunk'
+        : 'unknown';
 
     return {
+      uniqueId,
       name,
+      kind,
       platform: extractPlatformFromUrl(url),
-      version: getRemoteVersion(name),
+      version: remoteName ? getRemoteVersion(remoteName) : 'unknown',
       size: 0,
       url,
     };
+  }
+
+  private static async readScriptManagerCache(): Promise<
+    Record<string, { url?: string }>
+  > {
+    const scriptManagerRaw = await AsyncStorage.getItem(
+      this.SCRIPT_MANAGER_CACHE_KEY
+    );
+    if (!scriptManagerRaw) {
+      return {};
+    }
+    return JSON.parse(scriptManagerRaw) as Record<string, { url?: string }>;
+  }
+
+  private static findScriptIdsForRemote(
+    cache: Record<string, { url?: string }>,
+    remoteName: string,
+    platform: string
+  ): string[] {
+    return Object.entries(cache)
+      .filter(([, entry]) => {
+        if (!entry.url) {
+          return false;
+        }
+        const resolved = resolveRemoteNameFromCacheUrl(entry.url);
+        return (
+          resolved === remoteName &&
+          extractPlatformFromUrl(entry.url) === platform
+        );
+      })
+      .map(([uniqueId]) => uniqueId);
+  }
+
+  /**
+   * Invalidate specific ScriptManager cache entries (container/chunk).
+   */
+  static async invalidateCacheEntries(uniqueIds: string[]): Promise<void> {
+    if (uniqueIds.length === 0) {
+      return;
+    }
+
+    try {
+      await ScriptManager.shared.invalidateScripts(uniqueIds);
+      mfTrace('3.cache.invalidateEntries', { uniqueIds });
+      notifyBundleCacheChanged();
+    } catch (error) {
+      console.error('BundleCache: Error invalidating cache entries:', error);
+    }
   }
 
   /**
@@ -119,7 +175,6 @@ export class BundleCacheManager {
   ): Promise<void> {
     try {
       if (version) {
-        // Invalidate specific version
         const versionedKey = generateVersionedCacheKey(
           remoteName,
           platform,
@@ -133,7 +188,6 @@ export class BundleCacheManager {
           `BundleCache: Invalidated ${remoteName} v${version} for ${platform}`
         );
       } else {
-        // Invalidate all versions of this remote
         const allKeys = await AsyncStorage.getAllKeys();
         const keysToDelete = allKeys.filter(key =>
           key.includes(`${remoteName}_${platform}`)
@@ -141,10 +195,17 @@ export class BundleCacheManager {
 
         if (keysToDelete.length > 0) {
           await AsyncStorage.multiRemove(keysToDelete);
-          console.log(
-            `BundleCache: Invalidated all versions of ${remoteName} for ${platform}`
-          );
         }
+      }
+
+      const cache = await this.readScriptManagerCache();
+      const scriptIds = this.findScriptIdsForRemote(cache, remoteName, platform);
+      await this.invalidateCacheEntries(scriptIds);
+
+      if (scriptIds.length > 0) {
+        console.log(
+          `BundleCache: Invalidated ${scriptIds.length} ScriptManager entries for ${remoteName} (${platform})`
+        );
       }
     } catch (error) {
       console.error('BundleCache: Error invalidating cache:', error);
@@ -170,8 +231,9 @@ export class BundleCacheManager {
         );
       }
 
-      // Also use ScriptManager's invalidation
+      // ScriptManager: clears metadata + native filesystem bundles
       await ScriptManager.shared.invalidateScripts();
+      notifyBundleCacheChanged();
     } catch (error) {
       console.error('BundleCache: Error clearing all cache:', error);
     }
@@ -228,7 +290,9 @@ export class BundleCacheManager {
           const size = content.length;
 
           bundles.push({
+            uniqueId: versionKey,
             name,
+            kind: 'unknown' as const,
             platform,
             version,
             size,
@@ -347,6 +411,9 @@ export function useBundleCache() {
     version?: string
   ) => BundleCacheManager.invalidateRemote(remoteName, platform, version);
 
+  const invalidateCacheEntry = (uniqueId: string) =>
+    BundleCacheManager.invalidateCacheEntries([uniqueId]);
+
   const invalidateAll = () => BundleCacheManager.invalidateAll();
 
   const getCacheStats = () => BundleCacheManager.getCacheStats();
@@ -362,6 +429,7 @@ export function useBundleCache() {
 
   return {
     invalidateRemote,
+    invalidateCacheEntry,
     invalidateAll,
     getCacheStats,
     checkForUpdates,

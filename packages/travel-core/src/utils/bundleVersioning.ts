@@ -155,6 +155,29 @@ export function extractRemoteNameFromUrl(url: string): string | null {
   return null;
 }
 
+/** Resolve MF remote name from container or chunk URL (prod slug or dev port). */
+export function resolveRemoteNameFromCacheUrl(url: string): string | null {
+  const fromContainer = extractRemoteNameFromUrl(url);
+  if (fromContainer) {
+    return fromContainer;
+  }
+
+  for (const [remoteName, entry] of Object.entries(REMOTES_CATALOG)) {
+    if (
+      url.includes(`/${entry.slug}/ios/`) ||
+      url.includes(`/${entry.slug}/android/`)
+    ) {
+      return remoteName;
+    }
+
+    if (url.includes(`:${entry.devPort}/`)) {
+      return remoteName;
+    }
+  }
+
+  return null;
+}
+
 export function extractPlatformFromUrl(url: string): string {
   const match = url.match(/\/(ios|android)\//);
   return match ? match[1] : Platform.OS;

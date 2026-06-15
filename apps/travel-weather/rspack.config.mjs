@@ -10,6 +10,7 @@ export default createRemoteRspackConfig({
   mfName: 'TravelWeather',
   entry: './index.js',
   exposes: {
+    './App': './src/navigation/MainNavigator',
     './WeatherScreen': './src/WeatherScreen',
   },
 });

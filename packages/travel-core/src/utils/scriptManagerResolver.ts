@@ -9,7 +9,8 @@ const SCRIPT_FETCH_OPTIONS = {
   cache: !__DEV__,
   retry: 3,
   retryDelay: 1000,
-} as const;
+  verifyScriptSignature: __DEV__ ? ('off' as const) : ('strict' as const),
+};
 
 function remoteScriptLocator(url: string) {
   return {

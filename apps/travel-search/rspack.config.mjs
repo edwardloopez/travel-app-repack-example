@@ -10,6 +10,7 @@ export default createRemoteRspackConfig({
   mfName: 'TravelSearch',
   entry: './index.js',
   exposes: {
+    './App': './src/navigation/MainNavigator',
     './SearchScreen': './src/SearchScreen',
   },
 });

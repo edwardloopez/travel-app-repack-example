@@ -52,6 +52,8 @@ android/app/release/
 *.p12
 *.key
 *.mobileprovision
+code-signing.pem
+code-signing.pem.pub
 *.keystore
 *.ipa
 *.apk

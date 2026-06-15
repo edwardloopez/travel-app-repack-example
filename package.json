@@ -35,6 +35,7 @@
     "build:remotes:android": "node scripts/build-remotes.mjs android && node scripts/generate-registry.mjs",
     "build:remotes:ios": "node scripts/build-remotes.mjs ios && node scripts/generate-registry.mjs",
     "serve:remotes": "node scripts/serve-remotes.mjs",
+    "setup:code-signing": "node scripts/setup-code-signing.mjs",
     "align-deps": "pnpm -r align-deps",
     "check-deps": "pnpm -r check-deps",
     "install:ci": "pnpm install --frozen-lockfile",

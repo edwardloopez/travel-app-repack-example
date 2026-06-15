@@ -6,10 +6,17 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createAPIClient, useTravelContext } from 'travel-core';
 import Config from 'react-native-config';
+import type { WeatherStackParamList } from './navigation/MainNavigator';
+
+type WeatherNavigation = NativeStackNavigationProp<
+  WeatherStackParamList,
+  'WeatherHome'
+>;
 
 interface WeatherData {
   location: string;
@@ -21,6 +28,7 @@ interface WeatherData {
 }
 
 const WeatherScreen: React.FC = () => {
+  const navigation = useNavigation<WeatherNavigation>();
   const { selectedDestination } = useTravelContext();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -111,6 +119,17 @@ const WeatherScreen: React.FC = () => {
         </View>
       ) : loading ? (
         <Text style={styles.pendingText}>Fetching weather data...</Text>
+      ) : null}
+
+      {weather ? (
+        <TouchableOpacity
+          style={styles.forecastButton}
+          onPress={() =>
+            navigation.navigate('WeatherForecast', { city: weather.location })
+          }
+        >
+          <Text style={styles.forecastButtonText}>View 5-day forecast →</Text>
+        </TouchableOpacity>
       ) : null}
 
       <Text style={styles.footer}>
@@ -215,6 +234,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#7f8c8d',
     marginBottom: 20,
+  },
+  forecastButton: {
+    backgroundColor: '#2196F3',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  forecastButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
   footer: {
     textAlign: 'center',
