@@ -11,6 +11,5 @@ export default createRemoteRspackConfig({
   entry: './index.js',
   exposes: {
     './App': './src/navigation/MainNavigator',
-    './WeatherScreen': './src/WeatherScreen',
   },
 });

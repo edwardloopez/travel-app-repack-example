@@ -26,13 +26,7 @@ const DetailScreen = (props: DetailProps) => (
 
 const MainNavigator: React.FC = () => {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: '#9C27B0' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '600' },
-      }}
-    >
+    <Stack.Navigator>
       <Stack.Screen
         name="SearchHome"
         component={SearchScreen}

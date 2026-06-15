@@ -24,6 +24,12 @@ export type { BundleCacheStats } from './utils/bundleCacheManager';
 export { mfTrace, MF_TRACE_ENABLED } from './utils/mfTrace';
 export { useRemoteBootstrap } from './hooks/useRemoteBootstrap';
 export type { BootstrapStatus } from './hooks/useRemoteBootstrap';
+export {
+  HOST_STACK_HEADER_COLOR,
+  hostStackScreenOptions,
+  microAppAccentColors,
+  createMicroAppStackScreenOptions,
+} from './navigation/screenOptions';
 
 // Shared types
 export type { Destination, FlightResult, HotelResult, Weather } from './types';

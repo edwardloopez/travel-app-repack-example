@@ -8,7 +8,7 @@
       "version": "1.0.0",
       "enabled": true,
       "exposes": [
-        "./WeatherScreen"
+        "./App"
       ],
       "screen": "Weather",
       "startCommand": "pnpm start:travel-weather"
@@ -30,7 +30,7 @@
       "version": "1.0.0",
       "enabled": true,
       "exposes": [
-        "./SearchScreen"
+        "./App"
       ],
       "screen": "Search",
       "startCommand": "pnpm start:travel-search"

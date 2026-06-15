@@ -15,6 +15,10 @@
     "name": "@react-navigation/native-stack",
     "version": "^7.3.25"
   },
+  "@react-navigation/elements": {
+    "name": "@react-navigation/elements",
+    "version": "^2.6.3"
+  },
   "react-native-safe-area-context": {
     "name": "react-native-safe-area-context",
     "version": "5.4.0"

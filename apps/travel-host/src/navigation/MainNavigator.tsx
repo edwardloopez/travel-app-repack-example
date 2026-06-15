@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { hostStackScreenOptions } from 'travel-core';
 import HomeScreen from '../screens/HomeScreen';
 import LazyDestinationsScreen from '../screens/LazyDestinationsScreen';
 import LazyPhotosScreen from '../screens/LazyPhotosScreen';
@@ -20,13 +21,7 @@ const MainNavigator: React.FC = () => {
   return (
     <Stack.Navigator
       initialRouteName="Home"
-      screenOptions={{
-        headerTintColor: '#fff',
-        headerBackButtonDisplayMode: 'minimal',
-        headerStyle: {
-          backgroundColor: '#2196F3',
-        },
-      }}
+      screenOptions={hostStackScreenOptions}
     >
       <Stack.Screen
         name="Home"
@@ -36,30 +31,22 @@ const MainNavigator: React.FC = () => {
       <Stack.Screen
         name="Weather"
         component={LazyWeatherScreen}
-        options={{
-          title: 'Weather',
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Destinations"
         component={LazyDestinationsScreen}
-        options={{
-          title: 'Destinations',
-        }}
+        options={{ title: 'Destinations' }}
       />
       <Stack.Screen
         name="Search"
         component={LazySearchScreen}
-        options={{
-          title: 'Search Flights & Hotels',
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Photos"
         component={LazyPhotosScreen}
-        options={{
-          title: 'Travel Photos',
-        }}
+        options={{ title: 'Travel Photos' }}
       />
     </Stack.Navigator>
   );

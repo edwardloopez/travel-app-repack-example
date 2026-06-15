@@ -1,4 +1,5 @@
 import React from 'react';
+import { HeaderBackButton } from '@react-navigation/elements';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import WeatherScreen from '../WeatherScreen';
@@ -20,6 +21,8 @@ type ForecastProps = NativeStackScreenProps<
   'WeatherForecast'
 >;
 
+type HomeProps = NativeStackScreenProps<WeatherStackParamList, 'WeatherHome'>;
+
 const ForecastScreen = (props: ForecastProps) => (
   <LazyScreen>
     <WeatherForecastScreen {...props} />
@@ -38,7 +41,21 @@ const MainNavigator: React.FC = () => {
       <Stack.Screen
         name="WeatherHome"
         component={WeatherScreen}
-        options={{ title: 'Weather' }}
+        options={({ navigation }: HomeProps) => ({
+          title: 'Weather',
+          headerLeft: ({ canGoBack: _canGoBack, ...headerProps }) => {
+            const parent = navigation.getParent();
+            if (!parent?.canGoBack()) {
+              return null;
+            }
+            return (
+              <HeaderBackButton
+                {...headerProps}
+                onPress={() => parent.goBack()}
+              />
+            );
+          },
+        })}
       />
       <Stack.Screen
         name="WeatherForecast"

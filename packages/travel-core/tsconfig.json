@@ -7,7 +7,12 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true
+    "strict": true,
+    "paths": {
+      "travel-sdk/lib/remotesCatalog.json": [
+        "../travel-sdk/lib/remotesCatalog.json"
+      ]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

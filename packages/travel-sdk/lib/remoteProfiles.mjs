@@ -57,6 +57,19 @@ function buildHostRemotes(profile = getProfile(), platform = 'ios') {
   }, {});
 }
 
+const REMOTE_EXPOSES = {
+  TravelWeather: './App',
+  TravelSearch: './App',
+};
+
+function getRemoteExpose(remoteName) {
+  if (REMOTE_EXPOSES[remoteName]) {
+    return REMOTE_EXPOSES[remoteName];
+  }
+
+  return `./${remoteName.replace('Travel', '')}Screen`;
+}
+
 function buildRegistryJson(profile = getProfile()) {
   const baseUrl = getStaticBaseUrl();
 
@@ -70,7 +83,7 @@ function buildRegistryJson(profile = getProfile()) {
         entry: `${baseUrl}/${entry.slug}/\${platform}/mf-manifest.json`,
         version: entry.version,
         enabled: true,
-        exposes: [`./${remoteName.replace('Travel', '')}Screen`],
+        exposes: [getRemoteExpose(remoteName)],
         screen: remoteName.replace('Travel', ''),
         startCommand: `pnpm start:travel-${entry.slug}`,
       };

@@ -1,4 +1,4 @@
-import catalogJson from '../../../travel-sdk/lib/remotesCatalog.json';
+import catalogJson from 'travel-sdk/lib/remotesCatalog.json';
 
 export interface RemoteCatalogEntry {
   slug: string;

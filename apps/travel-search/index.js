@@ -1,5 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-var react_native_1 = require("react-native");
-var App_1 = require("./src/App");
-react_native_1.AppRegistry.registerComponent('TravelSearch', function () { return App_1.default; });
+import { AppRegistry } from 'react-native';
+import App from './src/App';
+
+AppRegistry.registerComponent('TravelSearch', () => App);
+
+export { default } from './src/navigation/MainNavigator';

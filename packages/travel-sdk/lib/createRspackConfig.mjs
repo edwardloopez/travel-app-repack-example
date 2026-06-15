@@ -2,13 +2,79 @@ import * as Repack from '@callstack/repack';
 import rspack from '@rspack/core';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import getSharedDependencies from './sharedDeps.js';
 import { buildHostRemotes } from './remoteProfiles.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const HOST_APP_DIR = path.resolve(__dirname, '../../../apps/travel-host');
+
+/** Packages that must resolve to one physical install (pnpm can duplicate them otherwise). */
+const SINGLETON_RESOLVE_PACKAGES = [
+  'react',
+  'react-native',
+  '@react-navigation/native',
+  '@react-navigation/native-stack',
+  '@react-navigation/elements',
+  'react-native-safe-area-context',
+  'react-native-screens',
+];
+
+function createSingletonResolveAliases(dirname) {
+  const hostRequire = createRequire(
+    path.join(HOST_APP_DIR, 'package.json')
+  );
+  const appRequire = createRequire(path.join(dirname, 'package.json'));
+  const aliases = {};
+
+  const resolvePkgRoot = pkg => {
+    try {
+      return path.dirname(appRequire.resolve(`${pkg}/package.json`));
+    } catch {
+      return path.dirname(hostRequire.resolve(`${pkg}/package.json`));
+    }
+  };
+
+  for (const pkg of SINGLETON_RESOLVE_PACKAGES) {
+    try {
+      aliases[pkg] = resolvePkgRoot(pkg);
+    } catch {
+      // Optional in some mini-apps.
+    }
+  }
+
+  for (const subpath of ['jsx-runtime', 'jsx-dev-runtime']) {
+    try {
+      aliases[`react/${subpath}`] = appRequire.resolve(`react/${subpath}`);
+    } catch {
+      try {
+        aliases[`react/${subpath}`] = hostRequire.resolve(`react/${subpath}`);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return aliases;
+}
+
+function createTravelResolveAliases(dirname) {
+  const repoRoot = path.resolve(dirname, '../..');
+
+  return {
+    'travel-sdk/lib/remotesCatalog.json': path.join(
+      repoRoot,
+      'packages/travel-sdk/lib/remotesCatalog.json'
+    ),
+  };
+}
 
 function createHostResolveAliases(dirname) {
   const hostRequire = createRequire(path.join(dirname, 'package.json'));
 
   return {
+    ...createSingletonResolveAliases(dirname),
+    ...createTravelResolveAliases(dirname),
     '@module-federation/enhanced/runtime': hostRequire.resolve(
       '@module-federation/enhanced/runtime'
     ),
@@ -111,6 +177,8 @@ export function createRemoteRspackConfig({
         path.resolve(dirname, '../../node_modules'),
       ],
       alias: {
+        ...createSingletonResolveAliases(dirname),
+        ...createTravelResolveAliases(dirname),
         '@babel/runtime': path.resolve(dirname, 'node_modules/@babel/runtime'),
       },
     },
