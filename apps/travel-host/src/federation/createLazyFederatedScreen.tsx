@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -10,6 +10,7 @@ import {
 import {
   BundleCacheManager,
   ErrorBoundary,
+  FederationErrorFallback,
   mfTrace,
 } from 'travel-core';
 
@@ -66,69 +67,88 @@ export function createLazyFederatedScreen({
 }: LazyFederatedScreenOptions) {
   const federatedId = moduleName ? `${remoteName}/${moduleName}` : remoteName;
 
-  const FederatedNavigator = React.lazy(async () => {
-    const startedAt = Date.now();
-    mfTrace('9.lazyScreen.load.start', { federatedId, remoteName });
-
-    try {
-      const module = await loadModule();
-      if (!module?.default) {
-        throw new Error(`${federatedId} module not found`);
-      }
-
-      mfTrace('9.lazyScreen.load.ok', {
-        federatedId,
-        durationMs: Date.now() - startedAt,
-      });
-
-      return module;
-    } catch (error) {
-      mfTrace('9.lazyScreen.load.error', {
-        federatedId,
-        durationMs: Date.now() - startedAt,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
-  });
-
-  const LazyScreen: React.FC = () => {
+  const FederatedScreenLoader: React.FC = () => {
+    const [phase, setPhase] = useState<'loading' | 'error' | 'ready'>('loading');
+    const [Screen, setScreen] = useState<React.ComponentType | null>(null);
     const [attempt, setAttempt] = useState(0);
 
-    const handleRetry = useCallback(async () => {
+    const loadScreen = useCallback(async () => {
+      setPhase('loading');
+      const startedAt = Date.now();
+      mfTrace('9.lazyScreen.load.start', { federatedId, remoteName, attempt });
+
+      try {
+        const module = await loadModule();
+        if (!module?.default) {
+          throw new Error(`${federatedId} module not found`);
+        }
+        setScreen(() => module.default);
+        setPhase('ready');
+        mfTrace('9.lazyScreen.load.ok', {
+          federatedId,
+          durationMs: Date.now() - startedAt,
+        });
+      } catch (error) {
+        mfTrace('9.lazyScreen.load.error', {
+          federatedId,
+          durationMs: Date.now() - startedAt,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        setScreen(null);
+        setPhase('error');
+      }
+    }, [attempt, federatedId, remoteName]);
+
+    useEffect(() => {
+      loadScreen();
+    }, [loadScreen]);
+
+    const handleRetry = async () => {
       mfTrace('9.lazyScreen.retry', { remoteName, platform: Platform.OS });
       await BundleCacheManager.invalidateRemote(remoteName, Platform.OS);
       setAttempt(current => current + 1);
-    }, []);
+    };
 
-    return (
-      <ErrorBoundary
-        key={attempt}
-        fallback={
-          <FederationFallback
-            fallbackIcon={fallbackIcon}
-            fallbackTitle={fallbackTitle}
-            startCommand={startCommand}
-            onRetry={handleRetry}
-          />
-        }
-        onError={(error, errorInfo) => {
-          console.log('Federation error:', error.message, errorInfo);
-        }}
-      >
-        <Suspense
-          fallback={
-            <View style={styles.loading}>
-              <ActivityIndicator size="large" color="#2196F3" />
-              <Text style={styles.loadingText}>Loading {loadingLabel}...</Text>
-            </View>
-          }
-        >
-          <FederatedNavigator />
-        </Suspense>
-      </ErrorBoundary>
-    );
+    if (phase === 'loading') {
+      return (
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color="#2196F3" />
+          <Text style={styles.loadingText}>Loading {loadingLabel}...</Text>
+        </View>
+      );
+    }
+
+    if (phase === 'error' || !Screen) {
+      return (
+        <FederationFallback
+          fallbackIcon={fallbackIcon}
+          fallbackTitle={fallbackTitle}
+          startCommand={startCommand}
+          onRetry={handleRetry}
+        />
+      );
+    }
+
+    return <Screen />;
   };
+
+  const LazyScreen: React.FC = () => (
+    <ErrorBoundary
+      fallback={<FederationErrorFallback />}
+      onError={(error, errorInfo) => {
+        if (__DEV__) {
+          mfTrace('9.lazyScreen.render.error', {
+            federatedId,
+            error: error.message,
+          });
+          return;
+        }
+        console.error('Federation render error:', error.message, errorInfo);
+      }}
+    >
+      <FederatedScreenLoader />
+    </ErrorBoundary>
+  );
 
   return LazyScreen;
 }
