@@ -179,64 +179,6 @@ class VersionedBundleStorage {
 
     return null;
   }
-
-  /**
-   * Clean up old bundle versions
-   */
-  async cleanupOldVersions(keepLatest: number = 3): Promise<void> {
-    try {
-      const allKeys = await AsyncStorage.getAllKeys();
-      const versionKeys = allKeys.filter(key =>
-        key.startsWith(VersionedBundleStorage.VERSION_PREFIX)
-      );
-
-      const bundles: Record<string, { key: string; version: string }[]> = {};
-
-      for (const versionKey of versionKeys) {
-        const version = await AsyncStorage.getItem(versionKey);
-        if (version) {
-          const bundleKey = versionKey.replace(
-            VersionedBundleStorage.VERSION_PREFIX,
-            ''
-          );
-          const [, remoteName, platform] = bundleKey.split('_');
-          const bundleId = `${remoteName}_${platform}`;
-
-          if (!bundles[bundleId]) {
-            bundles[bundleId] = [];
-          }
-
-          bundles[bundleId].push({ key: bundleKey, version });
-        }
-      }
-
-      // Clean up old versions for each bundle
-      for (const [bundleId, versions] of Object.entries(bundles)) {
-        if (versions.length > keepLatest) {
-          // Sort by version and keep only the latest N versions
-          versions.sort((a, b) => b.version.localeCompare(a.version));
-          const toDelete = versions.slice(keepLatest);
-
-          for (const { key } of toDelete) {
-            await Promise.all([
-              AsyncStorage.removeItem(
-                `${VersionedBundleStorage.CONTENT_PREFIX}${key}`
-              ),
-              AsyncStorage.removeItem(
-                `${VersionedBundleStorage.VERSION_PREFIX}${key}`
-              ),
-            ]);
-          }
-
-          console.log(
-            `BundleCache: Cleaned up ${toDelete.length} old versions for ${bundleId}`
-          );
-        }
-      }
-    } catch (error) {
-      console.warn('BundleCache: Error during cleanup:', error);
-    }
-  }
 }
 
 /**
@@ -244,8 +186,7 @@ class VersionedBundleStorage {
  *
  * Features:
  * - Version-aware bundle caching with semantic versioning
- * - Automatic cache invalidation when versions change
- * - Cleanup of old bundle versions
+ * - Automatic cache invalidation when versions change (via checkForUpdates)
  * - Fallback handling for version mismatches
  */
 const BundleCacheProvider: React.FC<BundleCacheProviderProps> = ({
@@ -269,8 +210,6 @@ const BundleCacheProvider: React.FC<BundleCacheProviderProps> = ({
       cacheEnabled: !__DEV__,
       message: 'ScriptManager storage adapter mounted',
     });
-
-    versionedStorage.cleanupOldVersions(3);
   }, []);
 
   return <>{children}</>;
