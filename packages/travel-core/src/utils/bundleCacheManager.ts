@@ -1,6 +1,7 @@
 import { ScriptManager } from '@callstack/repack/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import {
   extractPlatformFromUrl,
   generateVersionedCacheKey,
@@ -381,40 +382,36 @@ export class BundleCacheManager {
       const scriptManagerCache = await this.readScriptManagerCache();
 
       for (const [remoteName, config] of Object.entries(remoteConfig)) {
-        const platforms = ['ios', 'android'];
-
-        for (const platform of platforms) {
-          const installedVersion = await this.getInstalledVersion(
+        const platform = Platform.OS;
+        const installedVersion = await this.getInstalledVersion(
+          remoteName,
+          platform
+        );
+        const hasScriptManagerEntries =
+          this.findScriptIdsForRemote(
+            scriptManagerCache,
             remoteName,
             platform
-          );
-          const hasScriptManagerEntries =
-            this.findScriptIdsForRemote(
-              scriptManagerCache,
-              remoteName,
-              platform
-            ).length > 0;
+          ).length > 0;
 
-          const needsInvalidation =
-            hasScriptManagerEntries &&
-            installedVersion !== config.version;
+        const needsInvalidation =
+          hasScriptManagerEntries && installedVersion !== config.version;
 
-          if (!needsInvalidation) {
-            continue;
-          }
-
-          await this.invalidateRemote(remoteName, platform);
-          updatedRemotes.push(`${remoteName}@${platform}`);
-          mfTrace('3.cache.versionMismatch', {
-            remoteName,
-            platform,
-            installedVersion,
-            registryVersion: config.version,
-          });
-          console.log(
-            `BundleCache: Detected update for ${remoteName} (${installedVersion} → ${config.version})`
-          );
+        if (!needsInvalidation) {
+          continue;
         }
+
+        await this.invalidateRemote(remoteName, platform);
+        updatedRemotes.push(`${remoteName}@${platform}`);
+        mfTrace('3.cache.versionMismatch', {
+          remoteName,
+          platform,
+          installedVersion,
+          registryVersion: config.version,
+        });
+        console.log(
+          `BundleCache: Detected update for ${remoteName} (${installedVersion} → ${config.version})`
+        );
       }
     } catch (error) {
       console.error('BundleCache: Error checking for updates:', error);
