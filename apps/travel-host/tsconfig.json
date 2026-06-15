@@ -1,9 +1,14 @@
 {
   "extends": "expo/tsconfig.base",
+  "include": ["**/*.ts", "**/*.tsx", "**/*.mts", "fetch-with-policy-plugin.ts"],
   "compilerOptions": {
     "strict": true,
     "noEmit": true,
-    "jsx": "react-native"
-  },
-  "include": ["**/*.ts", "**/*.tsx", "fetch-with-policy-plugin.ts"]
+    "jsx": "react-native",
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "paths": {
+      "travel-sdk/lib/*": ["../../packages/travel-sdk/lib/*"]
+    }
+  }
 }

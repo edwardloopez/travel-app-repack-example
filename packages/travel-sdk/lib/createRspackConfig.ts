@@ -1,10 +1,11 @@
 import * as Repack from '@callstack/repack';
 import rspack from '@rspack/core';
+import type { RspackPluginInstance } from '@rspack/core';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import getSharedDependencies from './sharedDeps.js';
-import { buildHostRemotes } from './remoteProfiles.mjs';
+import getSharedDependencies from './sharedDeps.ts';
+import { buildHostRemotes } from './remoteProfiles.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOST_APP_DIR = path.resolve(__dirname, '../../../apps/travel-host');
@@ -20,14 +21,27 @@ const SINGLETON_RESOLVE_PACKAGES = [
   'react-native-screens',
 ];
 
-function createSingletonResolveAliases(dirname) {
-  const hostRequire = createRequire(
-    path.join(HOST_APP_DIR, 'package.json')
-  );
-  const appRequire = createRequire(path.join(dirname, 'package.json'));
-  const aliases = {};
+export interface HostRspackConfigOptions {
+  dirname: string;
+  entry: string;
+  runtimePlugins?: string[];
+  extraPlugins?: RspackPluginInstance[];
+}
 
-  const resolvePkgRoot = pkg => {
+export interface RemoteRspackConfigOptions {
+  dirname: string;
+  appName: string;
+  mfName: string;
+  entry: string;
+  exposes: Record<string, string>;
+}
+
+function createSingletonResolveAliases(dirname: string): Record<string, string> {
+  const hostRequire = createRequire(path.join(HOST_APP_DIR, 'package.json'));
+  const appRequire = createRequire(path.join(dirname, 'package.json'));
+  const aliases: Record<string, string> = {};
+
+  const resolvePkgRoot = (pkg: string) => {
     try {
       return path.dirname(appRequire.resolve(`${pkg}/package.json`));
     } catch {
@@ -58,7 +72,7 @@ function createSingletonResolveAliases(dirname) {
   return aliases;
 }
 
-function createTravelResolveAliases(dirname) {
+function createTravelResolveAliases(dirname: string): Record<string, string> {
   const repoRoot = path.resolve(dirname, '../..');
 
   return {
@@ -69,7 +83,7 @@ function createTravelResolveAliases(dirname) {
   };
 }
 
-function createHostResolveAliases(dirname) {
+function createHostResolveAliases(dirname: string): Record<string, string> {
   const hostRequire = createRequire(path.join(dirname, 'package.json'));
 
   return {
@@ -89,7 +103,7 @@ export function createHostRspackConfig({
   entry,
   runtimePlugins = [],
   extraPlugins = [],
-}) {
+}: HostRspackConfigOptions) {
   const config = Repack.defineRspackConfig(({ mode, platform }) => ({
     mode,
     context: dirname,
@@ -136,7 +150,6 @@ export function createHostRspackConfig({
       new Repack.plugins.ModuleFederationPluginV2({
         name: 'TravelHost',
         dts: false,
-        // Per-platform URLs (ios/android) from rspack env — not a runtime placeholder.
         remotes: buildHostRemotes(undefined, platform),
         shared: getSharedDependencies({ eager: true }),
         runtimePlugins,
@@ -161,7 +174,7 @@ export function createRemoteRspackConfig({
   mfName,
   entry,
   exposes,
-}) {
+}: RemoteRspackConfigOptions) {
   const repoRoot = path.resolve(dirname, '../..');
   const codeSigningKeyPath = path.join(repoRoot, 'code-signing.pem');
 

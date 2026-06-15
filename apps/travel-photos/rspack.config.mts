@@ -1,4 +1,4 @@
-import { createRemoteRspackConfig } from 'travel-sdk/lib/createRspackConfig.mjs';
+import { createRemoteRspackConfig } from 'travel-sdk/lib/createRspackConfig.ts';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

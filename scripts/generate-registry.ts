@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildRegistryJson } from '../packages/travel-sdk/lib/remoteProfiles.mjs';
+import { buildRegistryJson } from '../packages/travel-sdk/lib/remoteProfiles';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');

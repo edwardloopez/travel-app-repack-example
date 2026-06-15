@@ -2,13 +2,19 @@
   "name": "travel-sdk",
   "version": "0.0.1",
   "description": "Dependency management & utils for travel app",
-  "main": "index.js",
+  "type": "module",
+  "main": "index.ts",
   "files": [
     "lib",
-    "index.js"
+    "index.ts"
   ],
+  "scripts": {
+    "typecheck": "tsc"
+  },
   "devDependencies": {
     "@callstack/repack": "5.2.0",
-    "@rspack/core": "^1.4.0"
+    "@rspack/core": "^1.4.0",
+    "@types/node": "^22.15.0",
+    "typescript": "~5.8.3"
   }
 }

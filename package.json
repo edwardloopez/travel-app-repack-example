@@ -32,8 +32,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "adbreverse": "nx run-many -t adbreverse",
-    "build:remotes:android": "node scripts/build-remotes.mjs android && node scripts/generate-registry.mjs",
-    "build:remotes:ios": "node scripts/build-remotes.mjs ios && node scripts/generate-registry.mjs",
+    "build:remotes:android": "tsx scripts/build-remotes.ts android && tsx scripts/generate-registry.ts",
+    "build:remotes:ios": "tsx scripts/build-remotes.ts ios && tsx scripts/generate-registry.ts",
     "serve:remotes": "node scripts/serve-remotes.mjs",
     "setup:code-signing": "node scripts/setup-code-signing.mjs",
     "align-deps": "pnpm -r align-deps",
@@ -51,7 +51,9 @@
     "eslint": "~8.57.1",
     "mprocs": "^0.7.1",
     "nx": "21.0.2",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.4",
+    "@types/node": "^22.15.0"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.4",

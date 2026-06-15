@@ -112,7 +112,7 @@ The enhanced plugin provides:
 - **React Native**: `0.80.2`
 - **React**: `19.1.0`
 - **Expo**: `~53.0.22`
-- **Node.js**: `>=22` (engineStrict)
+- **Node.js**: `>=22` (engineStrict; `22.18+` recommended for native TypeScript rspack configs; older 22.x uses jiti automatically)
 
 ---
 
@@ -122,7 +122,7 @@ The enhanced plugin provides:
 travel-app-repack-example/
 ├── 📱 apps/                          # Micro-frontend applications
 │   ├── travel-host/                  # Main host app (Port: 8081)
-│   │   ├── rspack.config.mjs         # MF V2 host (runtime remotes)
+│   │   ├── rspack.config.mts         # MF V2 host (runtime remotes)
 │   │   └── src/federation/           # Dynamic remote registration
 │   ├── travel-weather/               # Weather MF (Port: 9000)
 │   ├── travel-destinations/          # Destinations MF (Port: 9001)
@@ -135,7 +135,7 @@ travel-app-repack-example/
 │   │   └── src/utils/               # Utility functions
 │   └── travel-sdk/                   # Dependency management SDK
 │       ├── lib/dependencies.json    # Centralized dependency versions
-│       └── lib/sharedDeps.js        # MF shared dependencies factory
+│       └── lib/sharedDeps.ts        # MF shared dependencies factory
 ├── remotes-dist/                    # Pre-built remote bundles + registry
 ├── scripts/                         # build-remotes, serve-remotes
 ├── ⚙️ Configuration Files
@@ -263,8 +263,8 @@ pnpm start:standalone:travel-weather
 
 ### 1. **Module Federation V2 Host Configuration**
 
-```javascript
-// apps/travel-host/rspack.config.mjs — remotes registered at runtime
+```typescript
+// apps/travel-host/rspack.config.mts — remotes registered at runtime
 new Repack.plugins.ModuleFederationPluginV2({
   name: 'TravelHost',
   dts: false,
@@ -279,8 +279,8 @@ registerRemotes(registry.remotes); // from remote-registry.json or dev config
 
 ### 2. **Module Federation V2 Remote Configuration**
 
-```javascript
-// apps/travel-weather/rspack.config.mjs
+```typescript
+// apps/travel-weather/rspack.config.mts
 new Repack.plugins.ModuleFederationPluginV2({
   name: 'TravelWeather',
   filename: 'TravelWeather.container.js.bundle',
@@ -309,7 +309,7 @@ export default {
 ### 4. **Shared Dependencies Management**
 
 ```javascript
-// packages/travel-sdk/lib/sharedDeps.js
+// packages/travel-sdk/lib/sharedDeps.ts
 const getSharedDependencies = ({ eager = true }) => {
   const dependencies = require('./dependencies.json');
 

@@ -4,11 +4,13 @@
     "noEmit": true,
     "jsx": "react-native",
     "baseUrl": ".",
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
     "paths": {
       "travel-core": ["../../packages/travel-core/src"],
-      "travel-sdk": ["../../packages/travel-sdk/src"]
+      "travel-sdk/lib/*": ["../../packages/travel-sdk/lib/*"]
     }
   },
-  "include": ["src/**/*", "index.js"],
+  "include": ["src/**/*", "index.js", "rspack.config.mts"],
   "exclude": ["node_modules", "android", "ios"]
 }

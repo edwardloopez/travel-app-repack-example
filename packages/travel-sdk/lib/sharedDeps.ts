@@ -1,25 +1,30 @@
-const { createRequire } = require('module');
-const path = require('path');
+import { createRequire } from 'node:module';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const dependencies = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'dependencies.json'), 'utf8')
+) as Record<string, { version: string }>;
 
 /**
  * Collect shared dependencies from the SDK and expose them
  * for the ModuleFederationPluginV2.
  *
  * `version` must be the **installed** semver (e.g. 7.1.17), not a range (^7.1.17).
- * Using a range as `version` makes MF fail singleton checks and loads duplicate
- * copies of @react-navigation — nested navigators then lose parent context (no back).
- *
- * @param {{ eager: boolean }} options Options for the shared dependencies. Use eager: false if using in a mini-app.
- * @returns Shared dependencies object.
  */
-const getSharedDependencies = ({ eager = true }) => {
-  const dependencies = require('./dependencies.json');
+export default function getSharedDependencies({
+  eager = true,
+}: {
+  eager?: boolean;
+} = {}) {
   const hostRequire = createRequire(
     path.join(__dirname, '../../../apps/travel-host/package.json')
   );
 
   const shared = Object.entries(dependencies).map(([dep, { version }]) => {
-    let installedVersion;
+    let installedVersion: string;
 
     try {
       installedVersion = hostRequire(`${dep}/package.json`).version;
@@ -35,10 +40,8 @@ const getSharedDependencies = ({ eager = true }) => {
         requiredVersion: installedVersion,
         version: installedVersion,
       },
-    ];
+    ] as const;
   });
 
   return Object.fromEntries(shared);
-};
-
-module.exports = getSharedDependencies;
+}

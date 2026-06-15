@@ -138,7 +138,7 @@ sequenceDiagram
 
 #### Fase 1 — Resolución del remote
 
-El host declara remotes en build time vía `createHostRspackConfig()` → `buildHostRemotes(profile, platform)` (`packages/travel-sdk/lib/remoteProfiles.mjs`):
+El host declara remotes en build time vía `createHostRspackConfig()` → `buildHostRemotes(profile, platform)` (`packages/travel-sdk/lib/remoteProfiles.ts`):
 
 ```javascript
 // dev → :9000-9003 | prod → localhost:4100 o CDN (remoteDefaults / registry)
@@ -224,7 +224,7 @@ Centralizadas en `packages/travel-sdk/lib/dependencies.json`:
 }
 ```
 
-Expuestas vía `packages/travel-sdk/lib/sharedDeps.js`:
+Expuestas vía `packages/travel-sdk/lib/sharedDeps.ts`:
 
 ```javascript
 const getSharedDependencies = ({ eager = true }) => {
@@ -263,10 +263,10 @@ REMOTE (eager: false)
 
 ### 3.3 Exposes: qué puede importar el host
 
-Cada remote define qué expone en su `rspack.config.mjs`:
+Cada remote define qué expone en su `rspack.config.mts`:
 
-```javascript
-// apps/travel-weather/rspack.config.mjs
+```typescript
+// apps/travel-weather/rspack.config.mts
 exposes: {
   './WeatherScreen': './src/WeatherScreen',
 }
@@ -532,8 +532,8 @@ El host lee config del backend con versión por segmento de usuario.
 
 ### Semana 2 — Configuración
 
-- [ ] Estudiar `apps/travel-host/rspack.config.mjs`
-- [ ] Estudiar `apps/travel-weather/rspack.config.mjs`
+- [ ] Estudiar `apps/travel-host/rspack.config.mts`
+- [ ] Estudiar `apps/travel-weather/rspack.config.mts`
 - [ ] Modificar un `expose` y consumirlo desde el host
 - [ ] Cambiar una versión en `dependencies.json` y observar el efecto
 - [ ] Probar en simulador (dev usa `localhost`)
@@ -649,11 +649,11 @@ Antes de implementar micro-apps en producción, responde:
 
 | Archivo | Qué aprender |
 |---------|-------------|
-| `packages/travel-sdk/lib/createRspackConfig.mjs` | Factory rspack host/remotes + `buildHostRemotes` |
+| `packages/travel-sdk/lib/createRspackConfig.ts` | Factory rspack host/remotes + `buildHostRemotes` |
 | `packages/travel-sdk/lib/remotesCatalog.json` | Catálogo único: slug, devPort, version por remote |
-| `packages/travel-sdk/lib/remoteProfiles.mjs` | Modos dev/prod (NODE_ENV) y registry JSON |
+| `packages/travel-sdk/lib/remoteProfiles.ts` | Modos dev/prod (NODE_ENV) y registry JSON |
 | `apps/travel-host/app.config.ts` | Config Expo (prebuild); `.env` para runtime |
-| `apps/travel-host/rspack.config.mjs` | Entry host + `dotenv` + plugins MF |
+| `apps/travel-host/rspack.config.mts` | Entry host + `dotenv` + plugins MF |
 | `apps/travel-host/src/federation/createLazyFederatedScreen.tsx` | Carga lazy + fallback + retry |
 | `apps/travel-host/src/federation/initRemotes.ts` | `registerRemotes` solo en `prod` |
 | `packages/travel-core/src/utils/remoteRegistry.ts` | Catálogo de remotes por perfil |
@@ -661,7 +661,7 @@ Antes de implementar micro-apps en producción, responde:
 | `packages/travel-core/src/utils/bundleVersioning.ts` | `loadRemoteConfig`, claves versionadas |
 | `packages/travel-core/src/utils/scriptManagerResolver.ts` | URLs de bundles + retry ScriptManager |
 | `apps/travel-host/fetch-with-policy-plugin.ts` | Fetch MF con reintentos |
-| `scripts/build-remotes.mjs` | Pipeline bundles → `remotes-dist/` |
+| `scripts/build-remotes.ts` | Pipeline bundles → `remotes-dist/` |
 | `remotes-dist/remote-registry.json` | Catálogo commiteable (bundles en `.gitignore`) |
 | `mprocs.yaml` | Orquestación de desarrollo |
 
@@ -731,7 +731,7 @@ El perfil se infiere del build — no hay variable de entorno:
 | **dev** | `__DEV__` (debug) / `NODE_ENV !== 'production'` (rspack) | `:9000-9003` | `buildDevRegistry()` | No — build-time |
 | **prod** | release / `NODE_ENV === 'production'` | `:4100` o CDN | `fetch(remote-registry.json)` | Sí — runtime |
 
-No hay variables MF en `.env` — dev/prod se infieren del build. URLs locales en `remoteDefaults.ts` / `remoteDefaults.mjs` (`DEV_MF_HOST`, `:4100`).
+No hay variables MF en `.env` — dev/prod se infieren del build. URLs locales en `packages/travel-sdk/lib/remoteDefaults.ts` (`DEV_MF_HOST`, `:4100`).
 
 **Prod:** URL del registry en `app.config.ts` → `extra.remoteRegistryUrl`.
 

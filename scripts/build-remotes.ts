@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { REMOTES_CATALOG } from '../packages/travel-sdk/lib/remotesCatalog.mjs';
+import { REMOTES_CATALOG } from '../packages/travel-sdk/lib/remotesCatalog';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -22,14 +22,19 @@ const platform = process.argv[2] || 'android';
 const codeSigningKeyPath = path.join(rootDir, 'code-signing.pem');
 
 if (!fs.existsSync(codeSigningKeyPath)) {
-  console.error(
-    '\nMissing code-signing.pem. Run: pnpm setup:code-signing\n'
-  );
+  console.error('\nMissing code-signing.pem. Run: pnpm setup:code-signing\n');
   process.exit(1);
 }
 
-function copyDist(appDir, slug) {
-  const sourceDir = path.join(rootDir, 'apps', appDir, 'build', 'generated', platform);
+function copyDist(appDir: string, slug: string) {
+  const sourceDir = path.join(
+    rootDir,
+    'apps',
+    appDir,
+    'build',
+    'generated',
+    platform
+  );
   const targetDir = path.join(rootDir, 'remotes-dist', slug, platform);
 
   if (!fs.existsSync(sourceDir)) {
@@ -45,11 +50,7 @@ for (const remote of REMOTE_APPS) {
   console.log(`\nBuilding ${remote.name} (${platform})...`);
   const result = spawnSync(
     'pnpm',
-    [
-      '--filter',
-      remote.filter,
-      'bundle:remote:' + platform,
-    ],
+    ['--filter', remote.filter, 'bundle:remote:' + platform],
     {
       cwd: rootDir,
       stdio: 'inherit',
