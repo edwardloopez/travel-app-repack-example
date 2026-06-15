@@ -38,7 +38,10 @@ export type BundleCacheStats = {
 type CacheChangeListener = () => void;
 const cacheChangeListeners = new Set<CacheChangeListener>();
 
-/** Called when ScriptManager persists cache metadata to storage. */
+/**
+ * Called when ScriptManager persists cache metadata to storage.
+ * @internal
+ */
 export function notifyBundleCacheChanged(): void {
   cacheChangeListeners.forEach(listener => listener());
 }

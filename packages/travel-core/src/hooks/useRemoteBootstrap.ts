@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { useRemoteRegistry } from '../context/RemoteRegistryContext';
 import { useBundleCache } from '../utils/bundleCacheManager';
 import { applyRemoteConfig } from '../utils/bundleVersioning';
-import { getRemoteProfile, loadRemoteRegistry } from '../utils/remoteRegistry';
+import { getRemoteProfile } from '../utils/remoteRegistry';
 import type { RemoteRegistry } from '../utils/remoteRegistry';
 import { mfTrace } from '../utils/mfTrace';
 
@@ -24,7 +24,7 @@ export function useRemoteBootstrap(
     registry: RemoteRegistry
   ) => Promise<void>
 ) {
-  const { applyRegistry, isReady } = useRemoteRegistry();
+  const { refreshRegistry, isReady } = useRemoteRegistry();
   const { checkForUpdates, preloadBundles } = useBundleCache();
   const [status, setStatus] = useState<BootstrapStatus>({
     isBootstrapping: true,
@@ -44,8 +44,7 @@ export function useRemoteBootstrap(
         platform: Platform.OS,
       });
       try {
-        const registry = await loadRemoteRegistry(Platform.OS);
-        applyRegistry(registry);
+        const registry = await refreshRegistry();
         const config = applyRemoteConfig(registry);
 
         if (initDynamicRemotes) {
