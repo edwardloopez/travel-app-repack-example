@@ -270,7 +270,7 @@ new Repack.plugins.ModuleFederationPluginV2({
   dts: false,
   remotes: {},
   shared: getSharedDependencies({ eager: true }),
-  runtimePlugins: ['./fetch-with-policy-plugin.ts'],
+  runtimePlugins: ['./mf-fetch-plugin.ts'],
 });
 
 // apps/travel-host/src/federation/initRemotes.ts

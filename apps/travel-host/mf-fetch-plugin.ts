@@ -14,7 +14,7 @@ async function sleep(ms: number) {
  */
 export default function (): FederationRuntimePlugin {
   return {
-    name: 'poc-fetch-plugin',
+    name: 'mf-fetch-plugin',
     async fetch(url: string, options: RequestInit) {
       const startedAt = Date.now();
       const isManifest = url.includes('mf-manifest.json');

@@ -1,6 +1,6 @@
 {
   "extends": "expo/tsconfig.base",
-  "include": ["**/*.ts", "**/*.tsx", "**/*.mts", "fetch-with-policy-plugin.ts"],
+  "include": ["**/*.ts", "**/*.tsx", "**/*.mts"],
   "compilerOptions": {
     "strict": true,
     "noEmit": true,

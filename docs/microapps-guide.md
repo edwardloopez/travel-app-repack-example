@@ -384,7 +384,7 @@ const config = await loadRemoteConfig();
 
 ### 4.2 Runtime plugins (fetch y reintentos)
 
-`apps/travel-host/fetch-with-policy-plugin.ts` intercepta **todos** los fetch de MF (manifest, container, chunks):
+`apps/travel-host/mf-fetch-plugin.ts` intercepta **todos** los fetch de MF (manifest, container, chunks):
 
 | Comportamiento actual (POC) | Futuro (prod) |
 |-----------------------------|---------------|
@@ -543,7 +543,7 @@ El host lee config del backend con versión por segmento de usuario.
 - [ ] Estudiar `BundleCacheManager` en `travel-core`
 - [ ] Estudiar `bundleVersioning.ts`
 - [ ] Usar `BundleCacheDebugScreen` para invalidar caché
-- [ ] Leer `fetch-with-policy-plugin.ts`
+- [ ] Leer `mf-fetch-plugin.ts`
 - [ ] Simular cambio de versión y verificar invalidación
 
 ### Semana 4 — Producción
@@ -660,7 +660,7 @@ Antes de implementar micro-apps en producción, responde:
 | `packages/travel-core/src/utils/bundleCacheManager.ts` | Caché, preload, invalidación |
 | `packages/travel-core/src/utils/bundleVersioning.ts` | `loadRemoteConfig`, claves versionadas |
 | `packages/travel-core/src/utils/scriptManagerResolver.ts` | URLs de bundles + retry ScriptManager |
-| `apps/travel-host/fetch-with-policy-plugin.ts` | Fetch MF con reintentos |
+| `apps/travel-host/mf-fetch-plugin.ts` | Fetch MF con reintentos |
 | `scripts/build-remotes.ts` | Pipeline bundles → `remotes-dist/` |
 | `remotes-dist/remote-registry.json` | Catálogo commiteable (bundles en `.gitignore`) |
 | `mprocs.yaml` | Orquestación de desarrollo |
@@ -714,7 +714,7 @@ RemoteBootstrapGate
 createLazyFederatedScreen()
  └─ loadFederatedModule()
       └─ import('TravelWeather/WeatherScreen')
-           ├─ fetch-with-policy-plugin.fetch()  → mf-manifest.json (retry x3)
+           ├─ mf-fetch-plugin.fetch()  → mf-manifest.json (retry x3)
            ├─ fetch container .container.js.bundle
            ├─ fetch chunk __federation_expose_WeatherScreen
            └─ VersionedBundleStorage guarda en AsyncStorage (si cache activo)

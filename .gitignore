@@ -124,7 +124,7 @@ coverage/
 # Accidental tsc output next to sources (all packages use noEmit now)
 packages/travel-core/src/**/*.js
 apps/**/src/**/*.js
-apps/travel-host/fetch-with-policy-plugin.js
+apps/travel-host/mf-fetch-plugin.js
 apps/travel-host/index.js
 
 # Temporary folders

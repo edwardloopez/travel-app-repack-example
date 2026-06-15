@@ -10,6 +10,6 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 export default createHostRspackConfig({
   dirname: __dirname,
   entry: './index.ts',
-  runtimePlugins: ['./fetch-with-policy-plugin.ts'],
+  runtimePlugins: ['./mf-fetch-plugin.ts'],
   extraPlugins: [new ExpoModulesPlugin()],
 });
