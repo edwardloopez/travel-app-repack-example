@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import {
   ActivityIndicator,
   Platform,
@@ -9,9 +11,12 @@ import {
 } from 'react-native';
 import {
   BundleCacheManager,
+  clearManifestProbeCache,
   ErrorBoundary,
   FederationErrorFallback,
   getRemoteVersion,
+  hostStackScreenOptions,
+  isRemoteManifestReachable,
   mfTrace,
 } from 'travel-core';
 
@@ -22,13 +27,24 @@ export type FederatedModuleLoader = () => Promise<{
 export interface LazyFederatedScreenOptions {
   remoteName: string;
   loadModule: FederatedModuleLoader;
-  /** Used in logs only; the static import lives in loadModule. */
+  /**
+   * Used in logs only; the static import lives in loadModule.
+   * */
   moduleName?: string;
   loadingLabel: string;
   fallbackTitle: string;
   fallbackIcon?: string;
   startCommand: string;
+  /**
+   * Restored via setOptions when the remote mounts (default: hide host header).
+   * */
+  readyStackOptions?: NativeStackNavigationOptions;
 }
+
+/**
+ * In-memory cache — avoids re-import (and manifest re-fetch) on repeat visits.
+ * */
+const federatedScreenCache = new Map<string, React.ComponentType>();
 
 function FederationFallback({
   fallbackIcon,
@@ -65,24 +81,69 @@ export function createLazyFederatedScreen({
   fallbackTitle,
   fallbackIcon = '⚠️',
   startCommand,
+  readyStackOptions = { headerShown: false },
 }: LazyFederatedScreenOptions) {
   const federatedId = moduleName ? `${remoteName}/${moduleName}` : remoteName;
+  const cachedInitially = federatedScreenCache.get(remoteName) ?? null;
 
   const FederatedScreenLoader: React.FC = () => {
-    const [phase, setPhase] = useState<'loading' | 'error' | 'ready'>('loading');
-    const [Screen, setScreen] = useState<React.ComponentType | null>(null);
+    const navigation = useNavigation();
+    const [phase, setPhase] = useState<'loading' | 'error' | 'ready'>(() =>
+      cachedInitially ? 'ready' : 'loading'
+    );
+    const [Screen, setScreen] = useState<React.ComponentType | null>(
+      () => cachedInitially
+    );
     const [attempt, setAttempt] = useState(0);
 
+    // Host header only on error (back). Loading/ready keep readyStackOptions — no jump.
+    useLayoutEffect(() => {
+      if (phase === 'error') {
+        navigation.setOptions({
+          headerShown: true,
+          title: loadingLabel,
+          ...hostStackScreenOptions,
+        });
+        return;
+      }
+
+      navigation.setOptions(readyStackOptions);
+    }, [navigation, phase, loadingLabel, readyStackOptions]);
+
     const loadScreen = useCallback(async () => {
+      const memoryCached = federatedScreenCache.get(remoteName);
+      if (memoryCached) {
+        setScreen(() => memoryCached);
+        setPhase('ready');
+        mfTrace('9.lazyScreen.load.cached', { federatedId, remoteName });
+        return;
+      }
+
       setPhase('loading');
       const startedAt = Date.now();
       mfTrace('9.lazyScreen.load.start', { federatedId, remoteName, attempt });
 
       try {
+        const offlineReady = await BundleCacheManager.canLoadOffline(
+          remoteName,
+          Platform.OS
+        );
+        if (!offlineReady) {
+          const manifestReachable = await isRemoteManifestReachable(
+            remoteName,
+            Platform.OS
+          );
+          if (!manifestReachable) {
+            throw new Error(`${remoteName} CDN unreachable`);
+          }
+        }
+
         const module = await loadModule();
         if (!module?.default) {
           throw new Error(`${federatedId} module not found`);
         }
+
+        federatedScreenCache.set(remoteName, module.default);
         setScreen(() => module.default);
         setPhase('ready');
         await BundleCacheManager.setInstalledVersion(
@@ -93,6 +154,7 @@ export function createLazyFederatedScreen({
         mfTrace('9.lazyScreen.load.ok', {
           federatedId,
           durationMs: Date.now() - startedAt,
+          offlineReady,
         });
       } catch (error) {
         mfTrace('9.lazyScreen.load.error', {
@@ -111,6 +173,8 @@ export function createLazyFederatedScreen({
 
     const handleRetry = async () => {
       mfTrace('9.lazyScreen.retry', { remoteName, platform: Platform.OS });
+      clearManifestProbeCache();
+      federatedScreenCache.delete(remoteName);
       await BundleCacheManager.invalidateRemote(remoteName, Platform.OS);
       setAttempt(current => current + 1);
     };

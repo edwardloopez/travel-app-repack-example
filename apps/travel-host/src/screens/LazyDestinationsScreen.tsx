@@ -8,4 +8,5 @@ export default createLazyFederatedScreen({
   fallbackTitle: 'Destinations Service',
   fallbackIcon: '🏛️',
   startCommand: 'pnpm start:travel-destinations',
+  readyStackOptions: { headerShown: true, title: 'Destinations' },
 });

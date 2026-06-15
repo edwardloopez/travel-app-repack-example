@@ -21,7 +21,19 @@ export * from './utils/remoteRegistry';
 export { setRemoteRegistryUrl } from './utils/appConfig';
 export { BundleCacheManager, useBundleCache, useLiveCacheStats } from './utils/bundleCacheManager';
 export type { BundleCacheStats } from './utils/bundleCacheManager';
+export {
+  clearCachedManifest,
+  getCachedManifest,
+  hasCachedManifest,
+  hasCachedManifestUrl,
+  setCachedManifest,
+} from './utils/manifestCache';
 export { mfTrace, MF_TRACE_ENABLED } from './utils/mfTrace';
+export {
+  clearManifestProbeCache,
+  isRemoteManifestReachable,
+  probeUrlReachable,
+} from './utils/remoteReachability';
 export { useRemoteBootstrap } from './hooks/useRemoteBootstrap';
 export type { BootstrapStatus } from './hooks/useRemoteBootstrap';
 export {

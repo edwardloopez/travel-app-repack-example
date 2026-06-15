@@ -8,4 +8,5 @@ export default createLazyFederatedScreen({
   fallbackTitle: 'Photos Service',
   fallbackIcon: '📸',
   startCommand: 'pnpm start:travel-photos',
+  readyStackOptions: { headerShown: true, title: 'Travel Photos' },
 });

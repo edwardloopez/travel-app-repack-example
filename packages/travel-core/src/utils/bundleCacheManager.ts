@@ -12,6 +12,7 @@ import {
   type VersionedRemoteConfig,
 } from '../utils/bundleVersioning';
 import { mfTrace } from '../utils/mfTrace';
+import { clearCachedManifest, hasCachedManifest } from './manifestCache';
 import { retryWithBackoff } from '../utils/retryWithBackoff';
 
 /**
@@ -245,6 +246,7 @@ export class BundleCacheManager {
       }
 
       await this.clearInstalledVersion(remoteName, platform);
+      await clearCachedManifest(remoteName, platform);
 
       const cache = await this.readScriptManagerCache();
       const scriptIds = this.findScriptIdsForRemote(cache, remoteName, platform);
@@ -368,6 +370,38 @@ export class BundleCacheManager {
         bundles: [],
       };
     }
+  }
+
+  /**
+   * True when ScriptManager has entries for this remote at the registry version.
+   */
+  static async hasCachedBundle(
+    remoteName: string,
+    platform: string = Platform.OS
+  ): Promise<boolean> {
+    const installedVersion = await this.getInstalledVersion(remoteName, platform);
+    if (!installedVersion || installedVersion !== getRemoteVersion(remoteName)) {
+      return false;
+    }
+
+    const cache = await this.readScriptManagerCache();
+    return (
+      this.findScriptIdsForRemote(cache, remoteName, platform).length > 0
+    );
+  }
+
+  /**
+   * Offline-ready: versioned manifest + ScriptManager bundles on disk.
+   */
+  static async canLoadOffline(
+    remoteName: string,
+    platform: string = Platform.OS
+  ): Promise<boolean> {
+    const [manifest, bundle] = await Promise.all([
+      hasCachedManifest(remoteName, platform),
+      this.hasCachedBundle(remoteName, platform),
+    ]);
+    return manifest && bundle;
   }
 
   /**

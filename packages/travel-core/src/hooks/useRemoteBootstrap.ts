@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { useRemoteRegistry } from '../context/RemoteRegistryContext';
-import { useBundleCache } from '../utils/bundleCacheManager';
+import { BundleCacheManager, useBundleCache } from '../utils/bundleCacheManager';
 import { applyRemoteConfig } from '../utils/bundleVersioning';
 import { getRemoteProfile } from '../utils/remoteRegistry';
 import type { RemoteRegistry } from '../utils/remoteRegistry';
 import { mfTrace } from '../utils/mfTrace';
+import { isRemoteManifestReachable } from '../utils/remoteReachability';
 
 export interface BootstrapStatus {
   isBootstrapping: boolean;
@@ -63,11 +64,46 @@ export function useRemoteBootstrap(
           enabledRemoteNames.includes(name)
         );
 
-        // Prefetch uses direct container URLs — only for prod (pre-built bundles).
+        // Prefetch uses ScriptManager natively — only when CDN is up and bundles
+        // are not already offline-ready (avoids native crashes when serve is down).
         if (profile !== 'dev' && preloadTargets.length > 0) {
-          mfTrace('4.prefetch.start', { targets: preloadTargets });
-          await preloadBundles(preloadTargets, Platform.OS, config);
-          mfTrace('4.prefetch.done', { targets: preloadTargets });
+          const platform = Platform.OS;
+          const cdnReachable = await isRemoteManifestReachable(
+            preloadTargets[0],
+            platform
+          );
+
+          if (!cdnReachable) {
+            mfTrace('4.prefetch.skipped', {
+              profile,
+              reason: 'cdn unreachable',
+              targets: preloadTargets,
+            });
+          } else {
+            const targetsNeedingPrefetch: string[] = [];
+            for (const remoteName of preloadTargets) {
+              if (await BundleCacheManager.canLoadOffline(remoteName, platform)) {
+                mfTrace('4.prefetch.skipRemote', {
+                  remoteName,
+                  reason: 'already offline-ready',
+                });
+                continue;
+              }
+              targetsNeedingPrefetch.push(remoteName);
+            }
+
+            if (targetsNeedingPrefetch.length === 0) {
+              mfTrace('4.prefetch.skipped', {
+                profile,
+                reason: 'all targets offline-ready',
+                targets: preloadTargets,
+              });
+            } else {
+              mfTrace('4.prefetch.start', { targets: targetsNeedingPrefetch });
+              await preloadBundles(targetsNeedingPrefetch, platform, config);
+              mfTrace('4.prefetch.done', { targets: targetsNeedingPrefetch });
+            }
+          }
         } else {
           mfTrace('4.prefetch.skipped', { profile, reason: 'dev or no targets' });
         }
