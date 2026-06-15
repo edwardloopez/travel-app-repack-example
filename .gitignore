@@ -187,11 +187,6 @@ temp/
 # Webpack Bundle Analyzer
 webpack-stats.json
 
-# NX
-.nx/
-.nx/cache
-.nx/workspace-data
-
 # Re.Pack specific
 **/.rnef/
 **/rspack-stats.json

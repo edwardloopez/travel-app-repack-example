@@ -104,8 +104,7 @@ The enhanced plugin provides:
 | Tool       | Purpose                                 | Configuration         |
 | ---------- | --------------------------------------- | --------------------- |
 | **pnpm**   | Package manager with workspace support  | `pnpm-workspace.yaml` |
-| **nx**     | Monorepo tooling and task orchestration | `nx.json`             |
-| **mprocs** | Multi-process development server        | `mprocs.yaml`         |
+| **concurrently** | Multi-process dev server (`pnpm start`) | root `package.json`   |
 
 ### React Native Stack
 
@@ -133,14 +132,17 @@ travel-app-repack-example/
 │   │   ├── src/components/           # Shared UI components
 │   │   ├── src/context/             # Global state management
 │   │   └── src/utils/               # Utility functions
-│   └── travel-sdk/                   # Dependency management SDK
-│       ├── lib/dependencies.json    # Centralized dependency versions
-│       └── lib/sharedDeps.ts        # MF shared dependencies factory
+│   └── travel-sdk/                   # Dependency management SDK (plain JS, no build step)
+│       ├── index.js                  # Public exports
+│       ├── lib/dependencies.json     # Centralized dependency versions
+│       ├── lib/sharedDeps.js         # MF shared dependencies factory
+│       ├── lib/createRspackConfig.js # Rspack factory for host/remotes
+│       ├── lib/remotesCatalog.json   # slug + devPort per remote
+│       ├── lib/remoteVersions.json   # Snapshot of versions (generated)
+│       └── lib/writeRemoteArtifacts.js
 ├── remotes-dist/                    # Pre-built remote bundles + registry
-├── scripts/                         # build-remotes, serve-remotes
+├── scripts/                         # build-remotes, generate-registry, serve-remotes
 ├── ⚙️ Configuration Files
-│   ├── nx.json                      # Nx workspace configuration
-│   ├── mprocs.yaml                  # Multi-process dev setup
 │   ├── pnpm-workspace.yaml          # PNPM workspace definition
 │   └── tsconfig.json                # Root TypeScript config
 └── 📚 docs/                         # Documentation
@@ -175,7 +177,7 @@ pod install
 cd ../../..
 
 # 3. Start all micro-frontends
-pnpm start  # Uses mprocs for orchestration
+pnpm start  # concurrently: host + 4 remotes
 
 # Alternative: Start individually
 pnpm start:travel-host        # Host app
@@ -202,7 +204,7 @@ pnpm run:travel-host:android
 ### 1. **Multi-Process Development** (Recommended)
 
 ```bash
-# Start all services with mprocs
+# Start all services (host + remotes)
 pnpm start
 ```
 
@@ -240,14 +242,35 @@ Dev MF URLs use `localhost` (simulator). Prod registry URL: `app.config.ts` → 
 pnpm start
 
 # Prod-like local test (release build + static bundles)
-pnpm build:remotes:ios
-pnpm serve:remotes       # :4100
+pnpm build:remotes:ios              # all remotes
+pnpm build:remotes:ios -- weather    # one remote (also: search, TravelWeather, etc.)
+pnpm serve:remotes                  # :4100
 pnpm run:travel-host:ios:release
+
+# Regenerate registry only (reads version from each micro-app package.json)
+pnpm generate:registry
 
 # Do NOT use `expo run:ios --configuration Release` — Expo pre-bundles with Metro
 # and cannot resolve federated imports (e.g. TravelPhotos/PhotosScreen).
 # Release uses react-native CLI + Re.Pack (see apps/travel-host/ios/.xcode.env.updates).
 ```
+
+### 4. **Remote version bumps (release cache)**
+
+Each micro-app version lives in its own `package.json`. The registry is generated from those versions — not from `remotesCatalog.json`.
+
+```bash
+# 1. Bump version in the micro-app
+# apps/travel-weather/package.json → "version": "1.0.2"
+
+# 2. Build bundle(s) and regenerate registry
+pnpm build:remotes:ios -- weather
+
+# 3. Rebuild host release and reopen the app
+pnpm run:travel-host:ios:release
+```
+
+On app start, `checkForUpdates()` compares the **installed** bundle version (`bundle_installed_*` in AsyncStorage) with the registry and invalidates ScriptManager cache when they differ.
 
 ### 4. **Standalone Mode**
 
@@ -280,13 +303,11 @@ registerRemotes(registry.remotes); // from remote-registry.json or dev config
 ### 2. **Module Federation V2 Remote Configuration**
 
 ```typescript
-// apps/travel-weather/rspack.config.ts
-new Repack.plugins.ModuleFederationPluginV2({
-  name: 'TravelWeather',
-  filename: 'TravelWeather.container.js.bundle',
-  dts: false,
+// apps/travel-weather/rspack.config.ts — via createRemoteRspackConfig from travel-sdk
+export default createRemoteRspackConfig({
+  mfName: 'TravelWeather',
   exposes: {
-    './WeatherScreen': './src/WeatherScreen',
+    './App': './src/navigation/MainNavigator',
   },
   shared: getSharedDependencies({ eager: false }),
 });
@@ -309,46 +330,39 @@ export default {
 ### 4. **Shared Dependencies Management**
 
 ```javascript
-// packages/travel-sdk/lib/sharedDeps.ts
-const getSharedDependencies = ({ eager = true }) => {
-  const dependencies = require('./dependencies.json');
+// packages/travel-sdk/lib/sharedDeps.js
+export default function getSharedDependencies({ eager = true } = {}) {
+  const dependencies = /* read from ./dependencies.json */;
 
   const shared = Object.entries(dependencies).map(([dep, { version }]) => {
     return [dep, { singleton: true, eager, requiredVersion: version, version }];
   });
 
   return Object.fromEntries(shared);
-};
+}
 ```
 
-### 5. **Nx Workspace Configuration**
+### 5. **Monorepo scripts (pnpm)**
+
+Replaced by pnpm workspaces. Root scripts orchestrate tasks across packages:
 
 ```json
-// nx.json
 {
-  "workspaceLayout": {
-    "appsDir": "apps",
-    "libsDir": "packages"
-  },
-  "targetDefaults": {
-    "bundle:ios": { "outputs": ["{projectRoot}/build"], "cache": true },
-    "bundle:android": { "outputs": ["{projectRoot}/build"], "cache": true }
-  }
+  "typecheck": "pnpm -r --if-present run typecheck",
+  "lint:check": "pnpm -r --if-present run lint",
+  "test": "pnpm -r --if-present run test"
 }
 ```
 
 ### 6. **Multi-Process Development Setup**
 
-```yaml
-# mprocs.yaml
-procs:
-  Host:
-    shell: pnpm start:travel-host
-    stop: SIGKILL
-  Weather:
-    shell: pnpm start:travel-weather
-    stop: SIGKILL
-  # ... other micro-frontends
+`pnpm start` uses **concurrently** to run host and remotes in one terminal:
+
+```bash
+pnpm start
+# Or start individually:
+pnpm start:travel-host
+pnpm start:travel-weather
 ```
 
 ---
@@ -456,13 +470,7 @@ shared: getSharedDependencies({ eager: false });
 
 ### 3. **Build Caching**
 
-```json
-// nx.json - Enable build caching
-"targetDefaults": {
-  "bundle:ios": { "cache": true },
-  "bundle:android": { "cache": true }
-}
-```
+Use Re.Pack / CI cache for `bundle:ios` and `bundle:remote:*` outputs under each app's `build/` directory.
 
 ---
 
@@ -476,7 +484,7 @@ shared: getSharedDependencies({ eager: false });
 
 ### 2. **Development Workflow**
 
-- Use `mprocs` for orchestrated development
+- Use `pnpm start` for orchestrated development (or individual `start:travel-*` scripts)
 - Enable hot reloading for fast iterations
 - Implement proper error boundaries
 
@@ -499,7 +507,6 @@ shared: getSharedDependencies({ eager: false });
 - [Module Federation V2 Documentation](https://module-federation.io/guide/start/index.html)
 - [Re.Pack Documentation](https://re-pack.dev/)
 - [React Native New Architecture](https://reactnative.dev/docs/the-new-architecture/landing-page)
-- [Nx Monorepo Guide](https://nx.dev/getting-started/intro)
 
 ---
 
@@ -519,4 +526,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ using Module Federation V2, Re.Pack 5.x, and React Native 0.79.5**
+**Built with ❤️ using Module Federation V2, Re.Pack 5.x, and React Native 0.80.2**

@@ -14,12 +14,16 @@
     "ios:release": "NODE_ENV=production react-native run-ios --mode Release --no-packager",
     "android:release": "NODE_ENV=production react-native run-android --mode Release --no-packager",
     "start": "react-native start",
-    "test": "nx jest:test --passWithNoTests",
-    "lint": "nx eslint:lint --ext .js,.jsx,.ts,.tsx",
+    "test": "jest --passWithNoTests",
+    "lint": "eslint \"src/**/*.{js,ts,tsx}\" index.ts app.config.ts rspack.config.ts mf-fetch-plugin.ts",
     "typecheck": "tsc",
     "bundle:ios": "NODE_ENV=production react-native webpack-bundle --platform ios --dev false --entry-file index.ts",
     "bundle:android": "NODE_ENV=production react-native webpack-bundle --platform android --dev false --entry-file index.ts",
     "adbreverse": "adb reverse tcp:8081 tcp:8081 && adb reverse tcp:9000 tcp:9000 && adb reverse tcp:9001 tcp:9001 && adb reverse tcp:9002 tcp:9002 && adb reverse tcp:9003 tcp:9003 && adb reverse tcp:4100 tcp:4100"
+  },
+  "jest": {
+    "preset": "react-native",
+    "modulePathIgnorePatterns": ["<rootDir>/build/"]
   },
   "dependencies": {
     "@babel/runtime": "^7.28.4",

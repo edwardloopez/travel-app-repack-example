@@ -66,9 +66,9 @@ graph TB
 | App | Rol | Puerto | Expone |
 |-----|-----|--------|--------|
 | `travel-host` | Host (super app) | 8081 | Consume remotes |
-| `travel-weather` | Remote MF | 9000 | `./WeatherScreen` |
+| `travel-weather` | Remote MF | 9000 | `./App` (navigator) |
 | `travel-destinations` | Remote MF | 9001 | `./DestinationsScreen` |
-| `travel-search` | Remote MF | 9002 | `./SearchScreen` |
+| `travel-search` | Remote MF | 9002 | `./App` |
 | `travel-photos` | Remote MF | 9003 | `./PhotosScreen` |
 
 ### 1.3 Vocabulario esencial
@@ -107,7 +107,7 @@ graph TB
 | Rspack | ^1.4.0 | Motor de bundling (Rust) |
 | Module Federation | 0.13.1 | Runtime de federación |
 | Expo | ~53 | Tooling nativo (host) |
-| pnpm + Nx | — | Monorepo y orquestación |
+| pnpm + concurrently | — | Monorepo y `pnpm start` (host + remotes) |
 
 ---
 
@@ -124,21 +124,21 @@ sequenceDiagram
     participant Cache as AsyncStorage / FS
 
     User->>Host: Navega a "Weather"
-    Host->>MF_Runtime: import('TravelWeather/WeatherScreen')
-    MF_Runtime->>CDN: GET /android/mf-manifest.json
+    Host->>MF_Runtime: import('TravelWeather/App')
+    MF_Runtime->>CDN: GET /ios/mf-manifest.json
     CDN-->>MF_Runtime: manifest JSON
     MF_Runtime->>CDN: GET TravelWeather.container.js.bundle
     CDN-->>MF_Runtime: JS bundle
-    MF_Runtime->>Cache: Guarda bundle (opcional)
+    MF_Runtime->>Cache: Guarda bundle (release)
     MF_Runtime-->>Host: Módulo resuelto
-    Host-->>User: Renderiza WeatherScreen
+    Host-->>User: Renderiza micro-app Weather
 ```
 
 ### 2.2 Fases de la descarga
 
 #### Fase 1 — Resolución del remote
 
-El host declara remotes en build time vía `createHostRspackConfig()` → `buildHostRemotes(profile, platform)` (`packages/travel-sdk/lib/remoteProfiles.ts`):
+El host declara remotes en build time vía `createHostRspackConfig()` → `buildHostRemotes(profile, platform)` (`packages/travel-sdk/lib/remoteProfiles.js`):
 
 ```javascript
 // dev → :9000-9003 | prod → localhost:4100 o CDN (remoteDefaults / registry)
@@ -168,7 +168,7 @@ Si el remote necesita `react`, el runtime verifica si el host ya lo cargó como 
 
 #### Fase 5 — Ejecución del módulo expuesto
 
-El `import('TravelWeather/WeatherScreen')` devuelve el componente exportado por el remote.
+El `import('TravelWeather/App')` devuelve el navigator exportado por el remote (que incluye `WeatherScreen`).
 
 ### 2.3 ¿Qué transporta la red?
 
@@ -190,26 +190,41 @@ https://cdn.tuempresa.com/mf/weather/v1.2.0/android/TravelWeather.container.js.b
 
 ### 2.4 Caché: dónde vive el bundle descargado
 
-Este proyecto implementa **dos capas de caché**:
+Este proyecto implementa **dos capas de caché** (solo en release — en dev la caché está desactivada):
 
-1. **ScriptManager (Re.Pack)** — caché de scripts en filesystem/memoria
-2. **BundleCacheManager (travel-core)** — versionado con AsyncStorage
+1. **ScriptManager (Re.Pack)** — metadata en AsyncStorage + archivos en filesystem nativo
+2. **BundleCacheManager (travel-core)** — seguimiento de versión instalada por remote
 
-```typescript
-// Clave versionada
-bundle_TravelWeather_android_1.0.0
+```text
+bundle_installed_TravelWeather_ios   → versión del registry que quedó cacheada
+Repack.ScriptManager.Cache.v4.release → entradas container/chunk por URL
 ```
+
+**Invalidación al arrancar:** `checkForUpdates()` compara la versión instalada (`bundle_installed_*`) con la del `remote-registry.json`. Si difieren, invalida las entradas de ScriptManager para ese remote y el prefetch vuelve a descargar.
 
 | Estrategia | Pros | Contras |
 |------------|------|---------|
 | **Sin caché** | Siempre última versión | Lento, consume datos |
-| **Caché por versión** | Controlado, invalidación clara | Requiere versionado explícito |
+| **Caché por versión** | Controlado, invalidación clara | Requiere bump de versión en `package.json` |
 | **Caché + TTL** | Balance UX/actualización | Puede servir versión vieja temporalmente |
 | **Stale-while-revalidate** | UX rápida + update en background | Más complejo |
 
 ---
 
 ## Parte 3 — Conceptos intermedios (configuración práctica)
+
+### 3.0 `travel-sdk` (dependency manager)
+
+Paquete **JS plano** (sin paso `build` / `dist`) al estilo [super-app-showcase](https://github.com/callstack/super-app-showcase). Los `rspack.config.ts` de host y remotes importan factories desde `'travel-sdk'`:
+
+| Módulo | Rol |
+|--------|-----|
+| `lib/sharedDeps.js` | Shared deps para ModuleFederationPluginV2 |
+| `lib/createRspackConfig.js` | `createHostRspackConfig` / `createRemoteRspackConfig` |
+| `lib/remotesCatalog.json` | slug + devPort (routing dev) |
+| `lib/remoteProfiles.js` | URLs dev/prod, `buildRegistryJson` |
+| `lib/remoteVersions.js` | Lee versión desde `package.json` de cada micro-app (Node) |
+| `lib/writeRemoteArtifacts.js` | Genera registry + `remoteVersions.json` |
 
 ### 3.1 Shared dependencies
 
@@ -224,7 +239,7 @@ Centralizadas en `packages/travel-sdk/lib/dependencies.json`:
 }
 ```
 
-Expuestas vía `packages/travel-sdk/lib/sharedDeps.ts`:
+Expuestas vía `packages/travel-sdk/lib/sharedDeps.js`:
 
 ```javascript
 const getSharedDependencies = ({ eager = true }) => {
@@ -268,14 +283,14 @@ Cada remote define qué expone en su `rspack.config.ts`:
 ```typescript
 // apps/travel-weather/rspack.config.ts
 exposes: {
-  './WeatherScreen': './src/WeatherScreen',
+  './App': './src/navigation/MainNavigator',
 }
 ```
 
 El host consume:
 
 ```typescript
-await import('TravelWeather/WeatherScreen');
+await import('TravelWeather/App');
 ```
 
 #### Buenas prácticas de exposes
@@ -286,35 +301,23 @@ await import('TravelWeather/WeatherScreen');
 
 ### 3.4 Carga lazy en React
 
-Patrón usado en `apps/travel-host/src/screens/LazyWeatherScreen.tsx`:
+Patrón usado en `apps/travel-host/src/screens/LazyWeatherScreen.tsx` vía `createLazyFederatedScreen`:
 
 ```typescript
-const WeatherScreen = React.lazy(async () => {
-  try {
-    const module = await import('TravelWeather/WeatherScreen');
-    if (!module?.default) throw new Error('Module not found');
-    return module;
-  } catch (error) {
-    return { default: WeatherFallback };
-  }
+export default createLazyFederatedScreen({
+  remoteName: 'TravelWeather',
+  loadModule: () => import('TravelWeather/App'),
+  loadingLabel: 'Weather',
+  fallbackTitle: 'Weather Service',
+  startCommand: 'pnpm start:travel-weather',
 });
-
-<ErrorBoundary fallback={<FederationErrorFallback />}>
-  <Suspense fallback={<Loading />}>
-    <WeatherScreen />
-  </Suspense>
-</ErrorBoundary>
 ```
 
-#### Capas de resiliencia
-
-1. `try/catch` en el import → fallback UI si el remote no está corriendo
-2. `Suspense` → loading mientras descarga
-3. `ErrorBoundary` → errores de render en el remote
+Internamente: `React.lazy` + `ErrorBoundary` + botón **Retry download** (`BundleCacheManager.invalidateRemote`).
 
 ### 3.5 Desarrollo local: orquestación multi-proceso
 
-`mprocs.yaml` levanta 5 procesos:
+`pnpm start` levanta 5 procesos con **concurrently** (host + remotes):
 
 | Proceso | Puerto | Comando |
 |---------|--------|---------|
@@ -369,18 +372,34 @@ CDN/
 
 **Flujo de actualización (POC actual):**
 
-1. CI/CD publica bundles nuevos al CDN y actualiza `remote-registry.json` con `"version": "1.1.0"`
-2. Al arrancar el host: `loadRemoteRegistry()` → `loadRemoteConfig()` lee `remote.version` del registry
-3. `BundleCacheManager.checkForUpdates()` compara con AsyncStorage e invalida caché vieja
-4. Al abrir la micro-app: `import()` descarga manifest + container + chunk si no hay cache para la versión nueva
+1. Bump `"version"` en `apps/travel-{slug}/package.json` del micro-app
+2. Build del remote + generación de artifacts:
+   ```bash
+   pnpm build:remotes:ios -- weather   # uno o varios remotes
+   pnpm build:remotes:ios              # todos
+   ```
+   Esto ejecuta `writeRemoteArtifacts()` que genera:
+   - `remotes-dist/remote-registry.json` — catálogo servido en prod (`:4100` o CDN)
+   - `packages/travel-sdk/lib/remoteVersions.json` — snapshot para fallbacks en dev
+3. Al arrancar el host: `refreshRegistry()` → `applyRemoteConfig()` lee `remote.version` del registry
+4. `BundleCacheManager.checkForUpdates()` compara versión instalada vs registry e invalida ScriptManager si difieren
+5. `preloadBundles()` (solo prod) descarga containers actualizados y marca la nueva versión instalada
 
 ```typescript
 // bundleVersioning.ts — config activa en runtime (no constante estática)
-const config = await loadRemoteConfig();
-// → { TravelWeather: { version: '1.1.0', url, manifestUrl }, ... }
+const config = applyRemoteConfig(registry);
+// → { TravelWeather: { version: '1.0.2', url, manifestUrl }, ... }
 ```
 
-**Importante:** la versión no se infiere del bundle; hay que subirla en `packages/travel-sdk/lib/remotesCatalog.json` (y regenerar `remote-registry.json` con `pnpm generate:registry` o el script equivalente). Sin bump de versión, el host puede reutilizar caché aunque el archivo en CDN cambió. `checkForUpdates()` solo corre **al abrir la app**, no en background.
+**Importante:** la versión **no** se infiere del contenido del bundle. Debes subir `"version"` en el `package.json` de la micro-app y regenerar el registry. Sin bump, el host puede reutilizar caché aunque el archivo en CDN cambió. `checkForUpdates()` solo corre **al abrir la app**, no en background.
+
+**Fuente de verdad por remote:**
+
+| Campo | Archivo |
+|-------|---------|
+| slug, devPort | `packages/travel-sdk/lib/remotesCatalog.json` |
+| version | `apps/travel-{slug}/package.json` |
+| registry publicado | `remotes-dist/remote-registry.json` (generado) |
 
 ### 4.2 Runtime plugins (fetch y reintentos)
 
@@ -469,7 +488,7 @@ Usuario abre feature → descarga → renderiza
 ```
 
 - **Cuándo:** features poco usadas, muchos remotes
-- **Implementación:** `createLazyFederatedScreen()` → `import('TravelWeather/WeatherScreen')` con fallback + retry manual
+- **Implementación:** `createLazyFederatedScreen()` → `import('TravelWeather/App')` con fallback + retry manual
 
 ### 5.2 Preload al inicio
 
@@ -558,7 +577,7 @@ El host lee config del backend con versión por segmento de usuario.
 
 1. **Crear un 5º remote** (`travel-profile`) con su pantalla y navegación en el host
 2. **Implementar preload** de Weather al abrir Home
-3. **Simular deploy** cambiando `version` en `remote-registry.json`, rebuild de remotes, y verificando invalidación en `BundleCacheDebugScreen`
+3. **Simular deploy** — bump `"version"` en `apps/travel-weather/package.json`, `pnpm build:remotes:ios -- weather`, verificar invalidación en `BundleCacheDebugScreen`
 4. **Agregar auth** al fetch del manifest en modo dev
 5. **Medir tiempo de carga** del remote con y sin caché
 
@@ -573,7 +592,7 @@ El host lee config del backend con versión por segmento de usuario.
 | `Singleton version mismatch` | Versiones distintas de `react`/`react-native` | Alinear `dependencies.json` |
 | Pantalla en blanco en dispositivo físico | `localhost` no alcanza el Mac | Usar simulador o estrategia LAN futura |
 | Hooks error / invalid hook call | Dos instancias de React | Verificar `singleton: true` |
-| Bundle viejo después de deploy | Versión no actualizada en registry o caché | Bump `version` en registry + reiniciar app |
+| Bundle viejo después de deploy | Versión no actualizada en `package.json` del remote o caché | Bump `version` en micro-app + `pnpm build:remotes:ios -- <remote>` + reiniciar app |
 | `ScriptDownloadFailure` en boot (dev) | Prefetch con bundlers apagados | Normal en dev; levantar remotes o usar release build |
 | Debug va a `:4100` en vez de `:900x` | Build release con debug mental model | Debug = `__DEV__`; `:4100` es solo prod |
 | `babel-plugin-transform-remove-console` | Falta en remotes al build producción | `pnpm add -D babel-plugin-transform-remove-console --filter TravelWeather` |
@@ -649,21 +668,23 @@ Antes de implementar micro-apps en producción, responde:
 
 | Archivo | Qué aprender |
 |---------|-------------|
-| `packages/travel-sdk/lib/createRspackConfig.ts` | Factory rspack host/remotes + `buildHostRemotes` |
-| `packages/travel-sdk/lib/remotesCatalog.json` | Catálogo único: slug, devPort, version por remote |
-| `packages/travel-sdk/lib/remoteProfiles.ts` | Modos dev/prod (NODE_ENV) y registry JSON |
+| `packages/travel-sdk/lib/createRspackConfig.js` | Factory rspack host/remotes + `buildHostRemotes` |
+| `packages/travel-sdk/lib/remotesCatalog.json` | Catálogo: slug + devPort (sin versión) |
+| `packages/travel-sdk/lib/remoteVersions.js` | Lee versión desde `package.json` de cada micro-app |
+| `packages/travel-sdk/lib/writeRemoteArtifacts.js` | Genera registry + `remoteVersions.json` |
+| `packages/travel-sdk/lib/remoteProfiles.js` | Modos dev/prod (NODE_ENV) y registry JSON |
 | `apps/travel-host/app.config.ts` | Config Expo (prebuild); `.env` para runtime |
 | `apps/travel-host/rspack.config.ts` | Entry host + `dotenv` + plugins MF |
 | `apps/travel-host/src/federation/createLazyFederatedScreen.tsx` | Carga lazy + fallback + retry |
 | `apps/travel-host/src/federation/initRemotes.ts` | `registerRemotes` solo en `prod` |
 | `packages/travel-core/src/utils/remoteRegistry.ts` | Catálogo de remotes por perfil |
-| `packages/travel-core/src/utils/bundleCacheManager.ts` | Caché, preload, invalidación |
-| `packages/travel-core/src/utils/bundleVersioning.ts` | `loadRemoteConfig`, claves versionadas |
+| `packages/travel-core/src/utils/bundleCacheManager.ts` | Caché, preload, invalidación por versión instalada |
+| `packages/travel-core/src/utils/bundleVersioning.ts` | `applyRemoteConfig`, claves versionadas |
 | `packages/travel-core/src/utils/scriptManagerResolver.ts` | URLs de bundles + retry ScriptManager |
 | `apps/travel-host/mf-fetch-plugin.ts` | Fetch MF con reintentos |
-| `scripts/build-remotes.ts` | Pipeline bundles → `remotes-dist/` |
+| `scripts/build-remotes.ts` | Build uno/varios/todos → `remotes-dist/` + registry |
+| `scripts/generate-registry.ts` | Solo regenera registry (sin build) |
 | `remotes-dist/remote-registry.json` | Catálogo commiteable (bundles en `.gitignore`) |
-| `mprocs.yaml` | Orquestación de desarrollo |
 
 ---
 
@@ -672,7 +693,6 @@ Antes de implementar micro-apps en producción, responde:
 - [Re.Pack Documentation](https://re-pack.dev/)
 - [Module Federation V2](https://module-federation.io/guide/start/index.html)
 - [React Native New Architecture](https://reactnative.dev/docs/the-new-architecture/landing-page)
-- [Nx Monorepo Guide](https://nx.dev/getting-started/intro)
 - [Callstack Blog — Module Federation](https://www.callstack.com/blog)
 
 ---
@@ -701,23 +721,23 @@ App
 
 RemoteBootstrapGate
  └─ useRemoteBootstrap(initDynamicRemotes)
-      ├─ loadRemoteRegistry() (una vez)               ← catálogo por perfil
-      ├─ applyRegistry() + applyRemoteConfig()        ← context + URLs/versiones
-      ├─ initDynamicRemotes(platform, registry)       ← registerRemotes solo prod
-      ├─ checkForUpdates(config)                      ← invalida caché vieja
-      └─ preloadBundles()                             ← solo prod
+      ├─ refreshRegistry()                             ← fetch o dev registry
+      ├─ applyRemoteConfig(registry)                   ← URLs/versiones activas
+      ├─ initDynamicRemotes(platform, registry)        ← registerRemotes solo prod
+      ├─ checkForUpdates(config)                       ← invalida si versión instalada ≠ registry
+      └─ preloadBundles()                              ← solo prod; marca versión instalada
 ```
 
 **Al navegar a una micro-app (ej. Weather):**
 
 ```
 createLazyFederatedScreen()
- └─ loadFederatedModule()
-      └─ import('TravelWeather/WeatherScreen')
+ └─ loadModule()
+      └─ import('TravelWeather/App')
            ├─ mf-fetch-plugin.fetch()  → mf-manifest.json (retry x3)
            ├─ fetch container .container.js.bundle
-           ├─ fetch chunk __federation_expose_WeatherScreen
-           └─ VersionedBundleStorage guarda en AsyncStorage (si cache activo)
+           ├─ fetch chunk __federation_expose_App.chunk.bundle
+           └─ ScriptManager cache (release) + versión instalada actualizada
 ```
 
 **Si falla:** botón Retry → `BundleCacheManager.invalidateRemote()` → nuevo `import()`.
@@ -731,7 +751,7 @@ El perfil se infiere del build — no hay variable de entorno:
 | **dev** | `__DEV__` (debug) / `NODE_ENV !== 'production'` (rspack) | `:9000-9003` | `buildDevRegistry()` | No — build-time |
 | **prod** | release / `NODE_ENV === 'production'` | `:4100` o CDN | `fetch(remote-registry.json)` | Sí — runtime |
 
-No hay variables MF en `.env` — dev/prod se infieren del build. URLs locales en `packages/travel-sdk/lib/remoteDefaults.ts` (`DEV_MF_HOST`, `:4100`).
+No hay variables MF en `.env` — dev/prod se infieren del build. URLs locales en `packages/travel-sdk/lib/remoteDefaults.js` (`DEV_MF_HOST`, `:4100`).
 
 **Prod:** URL del registry en `app.config.ts` → `extra.remoteRegistryUrl`.
 
@@ -757,9 +777,14 @@ pnpm start
 pnpm adbreverse   # Android físico: 8081, 9000-9003, 4100
 
 # Prod-like local (release build)
-pnpm build:remotes:ios
+pnpm build:remotes:ios                    # todos los remotes + registry
+pnpm build:remotes:ios -- weather         # solo weather (+ registry)
+pnpm build:remotes:android -- weather search
+pnpm generate:registry                    # solo registry (lee package.json de cada app)
 pnpm serve:remotes
 pnpm run:travel-host:ios:release
+
+# Selectores válidos: slug (weather), MF name (TravelWeather), dir (travel-weather)
 
 # `expo run:ios --configuration Release` no sirve aquí: Expo hace exportEager con Metro
 # antes del build nativo y falla en imports federados. Release → `ios:release` (Re.Pack).
@@ -778,11 +803,12 @@ pnpm run:travel-host:ios:release
 
 ### Limitaciones del POC
 
-- Versión manual en registry (no auto-detect del manifest)
+- Versión manual en `package.json` de cada micro-app (no auto-detect del manifest)
 - `checkForUpdates` solo al arrancar la app
-- Sin auth ni firma de bundles
+- Sin auth ni firma de bundles en fetch (CodeSigningPlugin sí en build remotes)
 - Sin CI/CD multi-repo real
 - Preload en dev desactivado a propósito
+- `travel-sdk` es JS plano en runtime (sin paso `tsc` / `dist`)
 
 ### Capa futura (no implementada)
 
