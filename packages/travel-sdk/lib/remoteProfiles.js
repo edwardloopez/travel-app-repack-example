@@ -1,17 +1,19 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   DEV_MF_HOST,
   LOCAL_REGISTRY_URL,
   LOCAL_STATIC_BASE_URL,
 } from './remoteDefaults.js';
-import { REMOTE_NAMES, REMOTES_CATALOG } from './remotesCatalog.js';
-import { getRemotePackageVersion } from './remoteVersions.js';
+import { REMOTES_CONFIG } from './remotes.config.js';
+import { readRemotePackageVersion } from './readRemotePackageVersion.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEV_REGISTRY_PATH = path.join(__dirname, 'remote-registry.dev.json');
 
 function getHostIp() {
   return DEV_MF_HOST;
-}
-
-function getProfile() {
-  return process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
 }
 
 function getStaticBaseUrl() {
@@ -22,84 +24,61 @@ function getRegistryUrl() {
   return LOCAL_REGISTRY_URL;
 }
 
-function resolveRemoteBaseUrl(remoteName, profile = getProfile()) {
-  const entry = REMOTES_CATALOG[remoteName];
-  if (profile === 'prod') {
-    return `${getStaticBaseUrl()}/${entry.slug}`;
+export function resolveTemplate(template, platform, host = getHostIp()) {
+  return template
+    .replace(/\$\{platform\}/g, platform)
+    .replace(/\$\{host\}/g, host);
+}
+
+function buildRemoteEntry(remote, profile) {
+  if (profile === 'dev') {
+    return `http://${getHostIp()}:${remote.devPort}/\${platform}/mf-manifest.json`;
   }
 
-  return `http://${getHostIp()}:${entry.devPort}`;
+  return `${getStaticBaseUrl()}/${remote.slug}/\${platform}/mf-manifest.json`;
 }
 
-function getManifestEntry(remoteName, platform, profile = getProfile()) {
-  const baseUrl = resolveRemoteBaseUrl(remoteName, profile);
-  return `${remoteName}@${baseUrl}/${platform}/mf-manifest.json`;
-}
-
-function getRemoteConfigs(profile = getProfile()) {
-  return REMOTE_NAMES.reduce((acc, remoteName) => {
-    const entry = REMOTES_CATALOG[remoteName];
-    acc[remoteName] = {
-      version: getRemotePackageVersion(remoteName),
-      name: remoteName,
-      url: resolveRemoteBaseUrl(remoteName, profile),
-      slug: entry.slug,
-      port: entry.devPort,
-    };
-    return acc;
-  }, {});
-}
-
-function buildHostRemotes(profile = getProfile(), platform = 'ios') {
-  return REMOTE_NAMES.reduce((acc, remoteName) => {
-    const baseUrl = resolveRemoteBaseUrl(remoteName, profile);
-    acc[remoteName] = `${remoteName}@${baseUrl}/${platform}/mf-manifest.json`;
-    return acc;
-  }, {});
-}
-
-const REMOTE_EXPOSES = {
-  TravelWeather: './App',
-  TravelSearch: './App',
-};
-
-function getRemoteExpose(remoteName) {
-  if (REMOTE_EXPOSES[remoteName]) {
-    return REMOTE_EXPOSES[remoteName];
-  }
-
-  return `./${remoteName.replace('Travel', '')}Screen`;
-}
-
-function buildRegistryJson(profile = getProfile()) {
-  const baseUrl = getStaticBaseUrl();
-
+export function buildRegistryJson(profile) {
   return {
     hostMinVersion: '1.0.0',
     profile,
-    remotes: REMOTE_NAMES.map(remoteName => {
-      const entry = REMOTES_CATALOG[remoteName];
-      return {
-        name: remoteName,
-        entry: `${baseUrl}/${entry.slug}/\${platform}/mf-manifest.json`,
-        version: getRemotePackageVersion(remoteName),
-        enabled: true,
-        exposes: [getRemoteExpose(remoteName)],
-        screen: remoteName.replace('Travel', ''),
-        startCommand: `pnpm start:travel-${entry.slug}`,
-      };
-    }),
+    remotes: REMOTES_CONFIG.map(remote => ({
+      name: remote.name,
+      slug: remote.slug,
+      devPort: remote.devPort,
+      entry: buildRemoteEntry(remote, profile),
+      version: readRemotePackageVersion(remote.name),
+      enabled: true,
+      exposes: remote.exposes,
+      title: remote.title,
+      description: remote.description,
+      screen: remote.screen,
+      color: remote.color,
+      icon: remote.icon,
+      startCommand:
+        profile === 'dev'
+          ? `pnpm start:travel-${remote.slug}`
+          : 'pnpm serve:remotes',
+    })),
   };
+}
+
+function readDevRegistryFile() {
+  return JSON.parse(fs.readFileSync(DEV_REGISTRY_PATH, 'utf8'));
+}
+
+export function buildHostRemotes(platform = 'ios') {
+  const registry = readDevRegistryFile();
+
+  return registry.remotes.reduce((acc, remote) => {
+    acc[remote.name] = `${remote.name}@${resolveTemplate(remote.entry, platform)}`;
+    return acc;
+  }, {});
 }
 
 export {
   getHostIp,
-  getProfile,
-  getStaticBaseUrl,
   getRegistryUrl,
-  resolveRemoteBaseUrl,
-  getManifestEntry,
-  getRemoteConfigs,
-  buildHostRemotes,
-  buildRegistryJson,
+  getStaticBaseUrl,
+  DEV_REGISTRY_PATH,
 };

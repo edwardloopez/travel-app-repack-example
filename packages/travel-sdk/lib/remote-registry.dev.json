@@ -1,12 +1,12 @@
 {
   "hostMinVersion": "1.0.0",
-  "profile": "prod",
+  "profile": "dev",
   "remotes": [
     {
       "name": "TravelWeather",
       "slug": "weather",
       "devPort": 9000,
-      "entry": "http://localhost:4100/weather/${platform}/mf-manifest.json",
+      "entry": "http://localhost:9000/${platform}/mf-manifest.json",
       "version": "0.0.1",
       "enabled": true,
       "exposes": [
@@ -17,13 +17,13 @@
       "screen": "Weather",
       "color": "#4CAF50",
       "icon": "☁️",
-      "startCommand": "pnpm serve:remotes"
+      "startCommand": "pnpm start:travel-weather"
     },
     {
       "name": "TravelDestinations",
       "slug": "destinations",
       "devPort": 9001,
-      "entry": "http://localhost:4100/destinations/${platform}/mf-manifest.json",
+      "entry": "http://localhost:9001/${platform}/mf-manifest.json",
       "version": "0.0.1",
       "enabled": true,
       "exposes": [
@@ -34,13 +34,13 @@
       "screen": "Destinations",
       "color": "#FF9800",
       "icon": "🌍",
-      "startCommand": "pnpm serve:remotes"
+      "startCommand": "pnpm start:travel-destinations"
     },
     {
       "name": "TravelSearch",
       "slug": "search",
       "devPort": 9002,
-      "entry": "http://localhost:4100/search/${platform}/mf-manifest.json",
+      "entry": "http://localhost:9002/${platform}/mf-manifest.json",
       "version": "0.0.1",
       "enabled": true,
       "exposes": [
@@ -51,13 +51,13 @@
       "screen": "Search",
       "color": "#9C27B0",
       "icon": "✈️",
-      "startCommand": "pnpm serve:remotes"
+      "startCommand": "pnpm start:travel-search"
     },
     {
       "name": "TravelPhotos",
       "slug": "photos",
       "devPort": 9003,
-      "entry": "http://localhost:4100/photos/${platform}/mf-manifest.json",
+      "entry": "http://localhost:9003/${platform}/mf-manifest.json",
       "version": "0.0.1",
       "enabled": true,
       "exposes": [
@@ -68,7 +68,7 @@
       "screen": "Photos",
       "color": "#E91E63",
       "icon": "📸",
-      "startCommand": "pnpm serve:remotes"
+      "startCommand": "pnpm start:travel-photos"
     }
   ]
 }

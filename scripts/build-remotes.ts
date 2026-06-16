@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { REMOTES_CATALOG } from '../packages/travel-sdk/lib/remotesCatalog.js';
+import { REMOTES_CONFIG } from '../packages/travel-sdk/lib/remotes.config.js';
 import { writeRemoteArtifacts } from '../packages/travel-sdk/lib/writeRemoteArtifacts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -18,14 +18,12 @@ type RemoteApp = {
   filter: string;
 };
 
-const REMOTE_APPS: RemoteApp[] = Object.entries(REMOTES_CATALOG).map(
-  ([name, entry]) => ({
-    name,
-    slug: entry.slug,
-    dir: `travel-${entry.slug}`,
-    filter: name,
-  })
-);
+const REMOTE_APPS: RemoteApp[] = REMOTES_CONFIG.map(remote => ({
+  name: remote.name,
+  slug: remote.slug,
+  dir: `travel-${remote.slug}`,
+  filter: remote.name,
+}));
 
 function printUsage() {
   const remoteList = REMOTE_APPS.map(
@@ -134,9 +132,11 @@ const remotesToBuild = resolveRemotes(selectors);
 const codeSigningKeyPath = path.join(rootDir, 'code-signing.pem');
 
 function generateRegistry() {
-  const { registryPath, versionsPath } = writeRemoteArtifacts(rootDir);
-  console.log(`Generated ${registryPath}`);
-  console.log(`Generated ${versionsPath}`);
+  const { devRegistryPath, prodBundlePath, cdnRegistryPath } =
+    writeRemoteArtifacts(rootDir);
+  console.log(`Generated ${devRegistryPath}`);
+  console.log(`Generated ${prodBundlePath}`);
+  console.log(`Generated ${cdnRegistryPath}`);
 }
 
 if (!fs.existsSync(codeSigningKeyPath)) {

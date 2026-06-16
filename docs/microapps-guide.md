@@ -138,16 +138,14 @@ sequenceDiagram
 
 #### Fase 1 — Resolución del remote
 
-El host declara remotes en build time vía `createHostRspackConfig()` → `buildHostRemotes(profile, platform)` (`packages/travel-sdk/lib/remoteProfiles.js`):
+El host declara remotes en build time vía `createHostRspackConfig()` → `buildHostRemotes(platform)` (`packages/travel-sdk/lib/remoteProfiles.js`):
 
 ```javascript
-// dev → :9000-9003 | prod → localhost:4100 o CDN (remoteDefaults / registry)
-remotes: buildHostRemotes(undefined, platform),
-// Ejemplo prod/ios (build rspack):
-// TravelWeather@http://localhost:4100/weather/ios/mf-manifest.json
+// Lee remote-registry.dev.json y resuelve ${platform}
+remotes: buildHostRemotes(platform),
+// Ejemplo dev/ios:
+// TravelWeather@http://localhost:9000/ios/mf-manifest.json
 ```
-
-`${platform}` se resuelve a `ios` o `android` en build time del host. La URL base depende de `NODE_ENV` en rspack (`dev` vs `prod`).
 
 #### Fase 2 — Fetch del manifest
 
@@ -221,10 +219,10 @@ Paquete **JS plano** (sin paso `build` / `dist`) al estilo [super-app-showcase](
 |--------|-----|
 | `lib/sharedDeps.js` | Shared deps para ModuleFederationPluginV2 |
 | `lib/createRspackConfig.js` | `createHostRspackConfig` / `createRemoteRspackConfig` |
-| `lib/remotesCatalog.json` | slug + devPort (routing dev) |
-| `lib/remoteProfiles.js` | URLs dev/prod, `buildRegistryJson` |
-| `lib/remoteVersions.js` | Lee versión desde `package.json` de cada micro-app (Node) |
-| `lib/writeRemoteArtifacts.js` | Genera registry + `remoteVersions.json` |
+| `lib/remotes.config.js` | Metadata estática: slug, devPort, exposes, UI |
+| `lib/remoteProfiles.js` | `buildRegistryJson`, `buildHostRemotes`, templates |
+| `lib/readRemotePackageVersion.js` | Lee versión desde `package.json` de cada micro-app (Node) |
+| `lib/writeRemoteArtifacts.js` | Genera `remote-registry.dev.json` + prod/CDN registry |
 
 ### 3.1 Shared dependencies
 
@@ -380,7 +378,8 @@ CDN/
    ```
    Esto ejecuta `writeRemoteArtifacts()` que genera:
    - `remotes-dist/remote-registry.json` — catálogo servido en prod (`:4100` o CDN)
-   - `packages/travel-sdk/lib/remoteVersions.json` — snapshot para fallbacks en dev
+   - `packages/travel-sdk/lib/remote-registry.dev.json` — registry dev (commiteado, usado en runtime y rspack)
+   - `packages/travel-sdk/lib/remote-registry.prod.json` — fallback embebido si falla el fetch en prod
 3. Al arrancar el host: `refreshRegistry()` → `applyRemoteConfig()` lee `remote.version` del registry
 4. `BundleCacheManager.checkForUpdates()` compara versión instalada vs registry e invalida ScriptManager si difieren
 5. `preloadBundles()` (solo prod) descarga containers actualizados y marca la nueva versión instalada
@@ -397,8 +396,9 @@ const config = applyRemoteConfig(registry);
 
 | Campo | Archivo |
 |-------|---------|
-| slug, devPort | `packages/travel-sdk/lib/remotesCatalog.json` |
+| slug, devPort, exposes, UI | `packages/travel-sdk/lib/remotes.config.js` |
 | version | `apps/travel-{slug}/package.json` |
+| registry dev (runtime + rspack) | `packages/travel-sdk/lib/remote-registry.dev.json` (generado) |
 | registry publicado | `remotes-dist/remote-registry.json` (generado) |
 
 ### 4.2 Runtime plugins (fetch y reintentos)
@@ -669,15 +669,16 @@ Antes de implementar micro-apps en producción, responde:
 | Archivo | Qué aprender |
 |---------|-------------|
 | `packages/travel-sdk/lib/createRspackConfig.js` | Factory rspack host/remotes + `buildHostRemotes` |
-| `packages/travel-sdk/lib/remotesCatalog.json` | Catálogo: slug + devPort (sin versión) |
-| `packages/travel-sdk/lib/remoteVersions.js` | Lee versión desde `package.json` de cada micro-app |
-| `packages/travel-sdk/lib/writeRemoteArtifacts.js` | Genera registry + `remoteVersions.json` |
-| `packages/travel-sdk/lib/remoteProfiles.js` | Modos dev/prod (NODE_ENV) y registry JSON |
+| `packages/travel-sdk/lib/remotes.config.js` | Metadata estática por remote (slug, puerto, exposes, UI) |
+| `packages/travel-sdk/lib/readRemotePackageVersion.js` | Lee versión desde `package.json` de cada micro-app |
+| `packages/travel-sdk/lib/writeRemoteArtifacts.js` | Genera dev + prod registry JSON |
+| `packages/travel-sdk/lib/remoteProfiles.js` | `buildRegistryJson`, `buildHostRemotes`, templates |
+| `packages/travel-sdk/lib/remote-registry.dev.json` | Registry dev commiteado (runtime + rspack) |
 | `apps/travel-host/app.config.ts` | Config Expo (prebuild); `.env` para runtime |
 | `apps/travel-host/rspack.config.ts` | Entry host + `dotenv` + plugins MF |
 | `apps/travel-host/src/federation/createLazyFederatedScreen.tsx` | Carga lazy + fallback + retry |
 | `apps/travel-host/src/federation/initRemotes.ts` | `registerRemotes` solo en `prod` |
-| `packages/travel-core/src/utils/remoteRegistry.ts` | Catálogo de remotes por perfil |
+| `packages/travel-core/src/utils/remoteRegistry.ts` | Carga registry (dev JSON / fetch prod), lookup por URL |
 | `packages/travel-core/src/utils/bundleCacheManager.ts` | Caché, preload, invalidación por versión instalada |
 | `packages/travel-core/src/utils/bundleVersioning.ts` | `applyRemoteConfig`, claves versionadas |
 | `packages/travel-core/src/utils/scriptManagerResolver.ts` | URLs de bundles + retry ScriptManager |
@@ -748,7 +749,7 @@ El perfil se infiere del build — no hay variable de entorno:
 
 | Modo | Cómo se detecta | URLs MF (rspack) | Registry runtime | `registerRemotes()` |
 |------|-------------------|------------------|------------------|---------------------|
-| **dev** | `__DEV__` (debug) / `NODE_ENV !== 'production'` (rspack) | `:9000-9003` | `buildDevRegistry()` | No — build-time |
+| **dev** | `__DEV__` (debug) / `NODE_ENV !== 'production'` (rspack) | `:9000-9003` | `remote-registry.dev.json` (bundled) | No — build-time |
 | **prod** | release / `NODE_ENV === 'production'` | `:4100` o CDN | `fetch(remote-registry.json)` | Sí — runtime |
 
 No hay variables MF en `.env` — dev/prod se infieren del build. URLs locales en `packages/travel-sdk/lib/remoteDefaults.js` (`DEV_MF_HOST`, `:4100`).

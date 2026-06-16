@@ -3,12 +3,11 @@
  */
 
 import { Platform } from 'react-native';
-import { REMOTE_NAMES, REMOTES_CATALOG } from '../constants/remotesCatalog';
-import { getCatalogRemoteVersion } from '../constants/remoteVersions';
 import {
-  getHostIp,
-  getRemoteProfile,
-  getStaticBaseUrl,
+  findRemoteByUrl,
+  getActiveRegistry,
+  resolveTemplate,
+  setActiveRegistry,
   type RemoteRegistry,
 } from './remoteRegistry';
 import { mfTrace } from './mfTrace';
@@ -31,42 +30,12 @@ export interface VersionedRemoteConfig {
 
 let activeRemoteConfig: VersionedRemoteConfig | null = null;
 
-function resolveRemoteBaseUrl(remoteName: string, profile = getRemoteProfile()) {
-  if (profile === 'prod') {
-    return `${getStaticBaseUrl()}/${REMOTES_CATALOG[remoteName].slug}`;
-  }
-
-  return `http://${getHostIp()}:${REMOTES_CATALOG[remoteName].devPort}`;
-}
-
-export function buildRemoteConfig(
-  platform: string = Platform.OS
-): VersionedRemoteConfig {
-  const profile = getRemoteProfile();
-
-  return REMOTE_NAMES.reduce((acc, remoteName) => {
-    const baseUrl = resolveRemoteBaseUrl(remoteName, profile);
-    acc[remoteName] = {
-      version: getCatalogRemoteVersion(remoteName),
-      name: remoteName,
-      url: baseUrl,
-      manifestUrl: `${baseUrl}/${platform}/mf-manifest.json`,
-    };
-    return acc;
-  }, {} as VersionedRemoteConfig);
-}
-
 export function setActiveRemoteConfig(config: VersionedRemoteConfig) {
   activeRemoteConfig = config;
 }
 
 export function getActiveRemoteConfig(): VersionedRemoteConfig {
-  return activeRemoteConfig || buildRemoteConfig();
-}
-
-/** @deprecated Use getActiveRemoteConfig() — avoids stale profile at module load. */
-export function getDefaultRemoteConfig(): VersionedRemoteConfig {
-  return buildRemoteConfig();
+  return activeRemoteConfig ?? {};
 }
 
 export function getRemoteVersion(remoteName: string): string {
@@ -110,6 +79,7 @@ export function remoteConfigFromRegistry(
 
 /** Apply URLs/versions from an already-loaded registry (no fetch). */
 export function applyRemoteConfig(registry: RemoteRegistry): VersionedRemoteConfig {
+  setActiveRegistry(registry);
   const config = remoteConfigFromRegistry(registry);
   setActiveRemoteConfig(config);
   mfTrace('2.remoteConfig.applied', {
@@ -137,27 +107,14 @@ export function extractRemoteNameFromUrl(url: string): string | null {
   return null;
 }
 
-/** Resolve MF remote name from container or chunk URL (prod slug or dev port). */
+/** Resolve MF remote name from container or chunk URL using the active registry. */
 export function resolveRemoteNameFromCacheUrl(url: string): string | null {
   const fromContainer = extractRemoteNameFromUrl(url);
   if (fromContainer) {
     return fromContainer;
   }
 
-  for (const [remoteName, entry] of Object.entries(REMOTES_CATALOG)) {
-    if (
-      url.includes(`/${entry.slug}/ios/`) ||
-      url.includes(`/${entry.slug}/android/`)
-    ) {
-      return remoteName;
-    }
-
-    if (url.includes(`:${entry.devPort}/`)) {
-      return remoteName;
-    }
-  }
-
-  return null;
+  return findRemoteByUrl(url)?.name ?? null;
 }
 
 export function extractPlatformFromUrl(url: string): string {
@@ -179,17 +136,39 @@ export function extractVersionFromUrl(url: string): string | null {
   return null;
 }
 
-export function getManifestUrl(remoteName: string, platform: string = Platform.OS) {
+function resolveManifestUrlFromRegistry(
+  remoteName: string,
+  platform: string
+): string | undefined {
   const config = getActiveRemoteConfig()[remoteName];
   if (config?.manifestUrl) {
     return config.manifestUrl;
   }
 
-  return `${config?.url || resolveRemoteBaseUrl(remoteName)}/${platform}/mf-manifest.json`;
+  const remote = getActiveRegistry()?.remotes.find(entry => entry.name === remoteName);
+  if (!remote) {
+    return undefined;
+  }
+
+  return resolveTemplate(remote.entry, platform);
+}
+
+export function getManifestUrl(remoteName: string, platform: string = Platform.OS) {
+  return resolveManifestUrlFromRegistry(remoteName, platform) ?? '';
 }
 
 export function getContainerUrl(remoteName: string, platform: string = Platform.OS) {
   const config = getActiveRemoteConfig()[remoteName];
-  const baseUrl = config?.url || resolveRemoteBaseUrl(remoteName);
+  const baseUrl =
+    config?.url ??
+    resolveManifestUrlFromRegistry(remoteName, platform)?.replace(
+      /\/mf-manifest\.json$/,
+      ''
+    );
+
+  if (!baseUrl) {
+    return '';
+  }
+
   return `${baseUrl}/${platform}/${remoteName}.container.js.bundle`;
 }

@@ -138,8 +138,10 @@ travel-app-repack-example/
 │       ├── lib/dependencies.json     # Centralized dependency versions
 │       ├── lib/sharedDeps.js         # MF shared dependencies factory
 │       ├── lib/createRspackConfig.js # Rspack factory for host/remotes
-│       ├── lib/remotesCatalog.json   # slug + devPort per remote
-│       ├── lib/remoteVersions.json   # Snapshot of versions (generated)
+│       ├── lib/remotes.config.js     # Static remote metadata (slug, ports, UI)
+│       ├── lib/remote-registry.dev.json   # Generated dev registry (committed)
+│       ├── lib/remote-registry.prod.json  # Bundled prod fallback (generated)
+│       ├── lib/remoteProfiles.js     # buildRegistryJson, buildHostRemotes
 │       └── lib/writeRemoteArtifacts.js
 ├── remotes-dist/                    # Pre-built remote bundles + registry
 ├── scripts/                         # build-remotes, generate-registry, serve-remotes
@@ -233,7 +235,7 @@ Profile is derived automatically:
 
 | Mode | Runtime | MF URLs | Registry |
 |------|---------|---------|----------|
-| **dev** | `__DEV__` | Live bundlers `:9000-9003` (build-time rspack) | In-memory from catalog |
+| **dev** | `__DEV__` | Live bundlers `:9000-9003` (build-time rspack) | Bundled `remote-registry.dev.json` |
 | **prod** | release build | CDN / `:4100` fallback | `fetch(remote-registry.json)` + `registerRemotes()` |
 
 Dev MF URLs use `localhost` (simulator). Prod registry URL: `app.config.ts` → `extra.remoteRegistryUrl`.
@@ -258,7 +260,7 @@ pnpm generate:registry
 
 ### 4. **Remote version bumps (release cache)**
 
-Each micro-app version lives in its own `package.json`. The registry is generated from those versions — not from `remotesCatalog.json`.
+Each micro-app version lives in its own `package.json`. Run `pnpm generate:registry` (or `build:remotes`) to refresh `remote-registry.dev.json` and `remotes-dist/remote-registry.json`.
 
 ```bash
 # 1. Bump version in the micro-app

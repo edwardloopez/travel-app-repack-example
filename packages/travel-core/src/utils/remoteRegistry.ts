@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
-import { REMOTE_NAMES, REMOTES_CATALOG } from '../constants/remotesCatalog';
-import { getCatalogRemoteVersion } from '../constants/remoteVersions';
+import devRegistryJson from 'travel-sdk/lib/remote-registry.dev.json';
+import prodRegistryJson from 'travel-sdk/lib/remote-registry.prod.json';
 import { DEV_MF_HOST, LOCAL_STATIC_BASE_URL } from '../constants/remoteDefaults';
 import { getRemoteRegistryUrl } from './appConfig';
 import { mfTrace } from './mfTrace';
@@ -9,10 +9,12 @@ export type RemoteProfile = 'dev' | 'prod';
 
 export interface RemoteRegistryEntry {
   name: string;
+  slug: string;
+  devPort?: number;
   entry: string;
   version: string;
   enabled: boolean;
-  exposes?: string[];
+  exposes: string[];
   screen?: string;
   startCommand?: string;
   title?: string;
@@ -27,39 +29,15 @@ export interface RemoteRegistry {
   remotes: RemoteRegistryEntry[];
 }
 
-export const FEATURE_METADATA: Record<
-  string,
-  Pick<RemoteRegistryEntry, 'title' | 'description' | 'icon' | 'color' | 'screen'>
-> = {
-  TravelWeather: {
-    title: 'Weather',
-    description: 'Check weather for your destinations',
-    screen: 'Weather',
-    color: '#4CAF50',
-    icon: '☁️',
-  },
-  TravelDestinations: {
-    title: 'Destinations',
-    description: 'Explore amazing destinations worldwide',
-    screen: 'Destinations',
-    color: '#FF9800',
-    icon: '🌍',
-  },
-  TravelSearch: {
-    title: 'Search',
-    description: 'Find flights and hotels',
-    screen: 'Search',
-    color: '#9C27B0',
-    icon: '✈️',
-  },
-  TravelPhotos: {
-    title: 'Photos',
-    description: 'Beautiful travel photography',
-    screen: 'Photos',
-    color: '#E91E63',
-    icon: '📸',
-  },
-};
+let activeRegistry: RemoteRegistry | null = null;
+
+export function setActiveRegistry(registry: RemoteRegistry) {
+  activeRegistry = registry;
+}
+
+export function getActiveRegistry(): RemoteRegistry | null {
+  return activeRegistry;
+}
 
 /** Dev vs prod is derived from the build — no REMOTE_PROFILE env var. */
 export function getRemoteProfile(): RemoteProfile {
@@ -87,39 +65,81 @@ export function resolveTemplate(
     .replace(/\$\{host\}/g, getHostIp());
 }
 
-function buildDevRegistry(platform: string): RemoteRegistry {
-  const host = getHostIp();
-
+function normalizeRegistry(
+  registry: RemoteRegistry,
+  platform: string
+): RemoteRegistry {
   return {
-    hostMinVersion: '1.0.0',
-    profile: 'dev',
-    remotes: REMOTE_NAMES.map(name => ({
-      name,
-      entry: `http://${host}:${REMOTES_CATALOG[name].devPort}/${platform}/mf-manifest.json`,
-      version: getCatalogRemoteVersion(name),
-      enabled: true,
-      ...FEATURE_METADATA[name],
-      startCommand: `pnpm start:travel-${REMOTES_CATALOG[name].slug}`,
+    ...registry,
+    remotes: registry.remotes.map(remote => ({
+      ...remote,
+      entry: resolveTemplate(remote.entry, platform),
     })),
   };
 }
 
-/** Local CDN fallback when prod registry fetch fails (e.g. serve:remotes on :4100). */
-function buildProdFallbackRegistry(platform: string): RemoteRegistry {
-  const baseUrl = getStaticBaseUrl();
+function loadDevRegistryFromBundle(platform: string): RemoteRegistry {
+  return normalizeRegistry(
+    { ...(devRegistryJson as RemoteRegistry), profile: 'dev' },
+    platform
+  );
+}
 
-  return {
-    hostMinVersion: '1.0.0',
-    profile: 'prod',
-    remotes: REMOTE_NAMES.map(name => ({
-      name,
-      entry: `${baseUrl}/${REMOTES_CATALOG[name].slug}/${platform}/mf-manifest.json`,
-      version: getCatalogRemoteVersion(name),
-      enabled: true,
-      ...FEATURE_METADATA[name],
-      startCommand: `pnpm serve:remotes`,
-    })),
-  };
+function loadProdFallbackRegistry(platform: string): RemoteRegistry {
+  return normalizeRegistry(
+    { ...(prodRegistryJson as RemoteRegistry), profile: 'prod' },
+    platform
+  );
+}
+
+export function findRemoteByUrl(
+  url: string,
+  registry: RemoteRegistry | null = getActiveRegistry()
+): RemoteRegistryEntry | null {
+  if (!registry) {
+    return null;
+  }
+
+  for (const remote of registry.remotes) {
+    if (url.includes(`/${remote.name}.container.js.bundle`)) {
+      return remote;
+    }
+
+    if (
+      remote.slug &&
+      (url.includes(`/${remote.slug}/ios/`) ||
+        url.includes(`/${remote.slug}/android/`))
+    ) {
+      return remote;
+    }
+
+    if (remote.devPort && url.includes(`:${remote.devPort}/`)) {
+      return remote;
+    }
+
+    const entryBase = remote.entry.replace(/\/mf-manifest\.json$/, '');
+    if (url.includes(entryBase)) {
+      return remote;
+    }
+  }
+
+  return null;
+}
+
+export function resolveRemoteFromManifestUrl(
+  url: string
+): { remoteName: string; platform: string } | null {
+  const platformMatch = url.match(/\/(ios|android)\/mf-manifest\.json/);
+  if (!platformMatch) {
+    return null;
+  }
+
+  const remote = findRemoteByUrl(url);
+  if (!remote) {
+    return null;
+  }
+
+  return { remoteName: remote.name, platform: platformMatch[1] };
 }
 
 export async function loadRemoteRegistry(
@@ -137,15 +157,10 @@ export async function loadRemoteRegistry(
         throw new Error(`Registry fetch failed: ${response.status}`);
       }
       const registry = (await response.json()) as RemoteRegistry;
-      const resolved = {
-        ...registry,
-        profile: 'prod' as const,
-        remotes: registry.remotes.map(remote => ({
-          ...FEATURE_METADATA[remote.name],
-          ...remote,
-          entry: resolveTemplate(remote.entry, platform),
-        })),
-      };
+      const resolved = normalizeRegistry(
+        { ...registry, profile: 'prod' },
+        platform
+      );
       mfTrace('1.registry.fetch.ok', {
         durationMs: Date.now() - startedAt,
         remotes: resolved.remotes.map(r => ({
@@ -162,20 +177,22 @@ export async function loadRemoteRegistry(
         error: error instanceof Error ? error.message : String(error),
       });
       console.warn('Failed to load prod registry, using local fallback:', error);
-      return buildProdFallbackRegistry(platform);
+      return loadProdFallbackRegistry(platform);
     }
   }
 
-  mfTrace('1.registry.dev.inMemory', { platform });
-
-  return buildDevRegistry(platform);
+  const resolved = loadDevRegistryFromBundle(platform);
+  mfTrace('1.registry.dev.bundled', {
+    platform,
+    remotes: resolved.remotes.map(r => ({
+      name: r.name,
+      entry: r.entry,
+      version: r.version,
+    })),
+  });
+  return resolved;
 }
 
 export function getEnabledFeatures(registry: RemoteRegistry) {
-  return registry.remotes
-    .filter(remote => remote.enabled)
-    .map(remote => ({
-      ...FEATURE_METADATA[remote.name],
-      ...remote,
-    }));
+  return registry.remotes.filter(remote => remote.enabled);
 }

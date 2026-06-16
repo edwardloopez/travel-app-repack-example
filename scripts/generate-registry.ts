@@ -5,7 +5,9 @@ import { writeRemoteArtifacts } from '../packages/travel-sdk/lib/writeRemoteArti
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
-const { registryPath, versionsPath } = writeRemoteArtifacts(rootDir);
+const { devRegistryPath, prodBundlePath, cdnRegistryPath } =
+  writeRemoteArtifacts(rootDir);
 
-console.log(`Generated ${registryPath}`);
-console.log(`Generated ${versionsPath}`);
+console.log(`Generated ${devRegistryPath}`);
+console.log(`Generated ${prodBundlePath}`);
+console.log(`Generated ${cdnRegistryPath}`);

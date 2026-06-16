@@ -9,11 +9,11 @@
     "paths": {
       "travel-core": ["../../packages/travel-core/src"],
       "travel-sdk": ["../../packages/travel-sdk/index.js"],
-      "travel-sdk/lib/remotesCatalog.json": [
-        "../../packages/travel-sdk/lib/remotesCatalog.json"
+      "travel-sdk/lib/remote-registry.dev.json": [
+        "../../packages/travel-sdk/lib/remote-registry.dev.json"
       ],
-      "travel-sdk/lib/remoteVersions.json": [
-        "../../packages/travel-sdk/lib/remoteVersions.json"
+      "travel-sdk/lib/remote-registry.prod.json": [
+        "../../packages/travel-sdk/lib/remote-registry.prod.json"
       ]
     }
   },

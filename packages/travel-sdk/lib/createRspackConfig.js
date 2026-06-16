@@ -59,9 +59,13 @@ function createTravelResolveAliases(dirname) {
   const repoRoot = path.resolve(dirname, '../..');
 
   return {
-    'travel-sdk/lib/remotesCatalog.json': path.join(
+    'travel-sdk/lib/remote-registry.dev.json': path.join(
       repoRoot,
-      'packages/travel-sdk/lib/remotesCatalog.json'
+      'packages/travel-sdk/lib/remote-registry.dev.json'
+    ),
+    'travel-sdk/lib/remote-registry.prod.json': path.join(
+      repoRoot,
+      'packages/travel-sdk/lib/remote-registry.prod.json'
     ),
   };
 }
@@ -139,7 +143,7 @@ export function createHostRspackConfig({
       new Repack.plugins.ModuleFederationPluginV2({
         name: 'TravelHost',
         dts: false,
-        remotes: buildHostRemotes(undefined, platform),
+        remotes: buildHostRemotes(platform),
         shared: getSharedDependencies({ eager: true }),
         runtimePlugins,
       }),

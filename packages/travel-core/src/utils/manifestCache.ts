@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { REMOTES_CATALOG } from '../constants/remotesCatalog';
 import { getManifestUrl, getRemoteVersion } from './bundleVersioning';
+import { resolveRemoteFromManifestUrl } from './remoteRegistry';
 import { mfTrace } from './mfTrace';
 
 const MANIFEST_CACHE_PREFIX = 'mf_manifest_';
@@ -17,24 +17,6 @@ function versionedCacheKey(
 /** URL key — shared with mf-fetch-plugin (MF runtime bundle, no travel-core import). */
 function legacyCacheKey(manifestUrl: string): string {
   return `${MANIFEST_CACHE_PREFIX}${manifestUrl}`;
-}
-
-export function resolveRemoteFromManifestUrl(
-  url: string
-): { remoteName: string; platform: string } | null {
-  const platformMatch = url.match(/\/(ios|android)\/mf-manifest\.json/);
-  if (!platformMatch) {
-    return null;
-  }
-  const platform = platformMatch[1];
-
-  for (const [remoteName, entry] of Object.entries(REMOTES_CATALOG)) {
-    if (url.includes(`/${entry.slug}/${platform}/`)) {
-      return { remoteName, platform };
-    }
-  }
-
-  return null;
 }
 
 export async function getCachedManifest(manifestUrl: string): Promise<string | null> {

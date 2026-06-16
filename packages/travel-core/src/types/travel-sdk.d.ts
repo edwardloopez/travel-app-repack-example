@@ -1,7 +1,13 @@
-declare module 'travel-sdk/lib/remotesCatalog.json' {
-  const catalog: Record<
-    string,
-    { slug: string; devPort: number; version: string }
-  >;
-  export default catalog;
+declare module 'travel-sdk/lib/remote-registry.dev.json' {
+  import type { RemoteRegistry } from '../utils/remoteRegistry';
+
+  const registry: RemoteRegistry;
+  export default registry;
+}
+
+declare module 'travel-sdk/lib/remote-registry.prod.json' {
+  import type { RemoteRegistry } from '../utils/remoteRegistry';
+
+  const registry: RemoteRegistry;
+  export default registry;
 }

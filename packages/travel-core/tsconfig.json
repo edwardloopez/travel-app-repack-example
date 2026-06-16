@@ -9,11 +9,11 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "paths": {
-      "travel-sdk/lib/remotesCatalog.json": [
-        "../travel-sdk/lib/remotesCatalog.json"
+      "travel-sdk/lib/remote-registry.dev.json": [
+        "../travel-sdk/lib/remote-registry.dev.json"
       ],
-      "travel-sdk/lib/remoteVersions.json": [
-        "../travel-sdk/lib/remoteVersions.json"
+      "travel-sdk/lib/remote-registry.prod.json": [
+        "../travel-sdk/lib/remote-registry.prod.json"
       ]
     }
   },
