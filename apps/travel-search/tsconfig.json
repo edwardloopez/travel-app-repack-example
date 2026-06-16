@@ -8,7 +8,13 @@
     "types": ["node"],
     "paths": {
       "travel-core": ["../../packages/travel-core/src"],
-      "travel-sdk": ["../../packages/travel-sdk/index.js"]
+      "travel-sdk": ["../../packages/travel-sdk/index.js"],
+      "travel-sdk/lib/remotesCatalog.json": [
+        "../../packages/travel-sdk/lib/remotesCatalog.json"
+      ],
+      "travel-sdk/lib/remoteVersions.json": [
+        "../../packages/travel-sdk/lib/remoteVersions.json"
+      ]
     }
   },
   "include": ["src/**/*", "index.js", "rspack.config.ts"],

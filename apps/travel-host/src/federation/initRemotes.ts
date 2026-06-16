@@ -1,4 +1,4 @@
-import { registerRemotes } from '@module-federation/runtime-tools/runtime';
+import { registerRemotes } from '@module-federation/runtime';
 import { getRemoteProfile, mfTrace, type RemoteRegistry } from 'travel-core';
 
 let initialized = false;

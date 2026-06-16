@@ -94,8 +94,9 @@ The enhanced plugin provides:
 
 | Package                       | Version   | Purpose                                      |
 | ----------------------------- | --------- | -------------------------------------------- |
-| `@callstack/repack`           | `5.2.0`   | React Native bundling with Module Federation |
-| `@module-federation/enhanced` | `0.13.1`  | Enhanced MF features                         |
+| `@callstack/repack`           | `5.2.5`   | React Native bundling with Module Federation |
+| `@module-federation/enhanced` | `2.5.1`   | Enhanced MF features                         |
+| `@module-federation/runtime`  | `2.5.1`   | MF runtime (`registerRemotes`, plugins)        |
 | `@rspack/core`                | `^1.4.0`  | Fast Rust-based bundler                      |
 | `@swc/helpers`                | `0.5.15`  | SWC transformation helpers                   |
 

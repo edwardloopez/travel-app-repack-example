@@ -1,4 +1,4 @@
-import type { FederationRuntimePlugin } from '@module-federation/runtime-tools/runtime';
+import type { ModuleFederationRuntimePlugin } from '@module-federation/runtime';
 
 const MAX_ATTEMPTS = 3;
 const BASE_DELAY_MS = 500;
@@ -26,7 +26,7 @@ let asyncStorageModule: AsyncStorageLike | null | undefined;
  * Manifest offline: primary path in `fetch` (return cached Response).
  * Backup path in `errorLoadRemote` when resolution still fails (`afterResolve`).
  */
-export default function (): FederationRuntimePlugin {
+export default function (): ModuleFederationRuntimePlugin {
   return {
     name: 'mf-fetch-plugin',
 
@@ -42,7 +42,8 @@ export default function (): FederationRuntimePlugin {
       });
     },
 
-    async errorLoadRemote({ id, error, lifecycle }) {
+    async errorLoadRemote(args) {
+      const { id, error, lifecycle } = args;
       if (lifecycle !== 'afterResolve') {
         console.error('[MF:Trace] 8.fetch.error', { id, lifecycle, error });
         return;

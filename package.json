@@ -53,5 +53,11 @@
   "dependencies": {
     "@babel/runtime": "^7.28.4",
     "@swc/helpers": "0.5.15"
+  },
+  "pnpm": {
+    "overrides": {
+      "@module-federation/enhanced": "2.5.1",
+      "@module-federation/runtime": "2.5.1"
+    }
   }
 }

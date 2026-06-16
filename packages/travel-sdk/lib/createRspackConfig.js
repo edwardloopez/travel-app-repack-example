@@ -6,7 +6,9 @@ import getSharedDependencies from './sharedDeps.js';
 import { buildHostRemotes } from './remoteProfiles.js';
 import { HOST_APP_DIR } from './paths.js';
 
-/** Packages that must resolve to one physical install (pnpm can duplicate them otherwise). */
+/**
+ * Packages that must resolve to one physical install (pnpm can duplicate them otherwise).
+ * */
 const SINGLETON_RESOLVE_PACKAGES = [
   'react',
   'react-native',
@@ -73,12 +75,18 @@ function createHostResolveAliases(dirname) {
     '@module-federation/enhanced/runtime': hostRequire.resolve(
       '@module-federation/enhanced/runtime'
     ),
-    '@module-federation/runtime-tools/runtime': hostRequire.resolve(
-      '@module-federation/runtime-tools/runtime'
-    ),
+    '@module-federation/runtime': hostRequire.resolve('@module-federation/runtime'),
   };
 }
 
+/**
+ * @param {{
+ *   dirname: string;
+ *   entry: string;
+ *   runtimePlugins?: string[];
+ *   extraPlugins?: import('@rspack/core').RspackPlugin[];
+ * }} options
+ */
 export function createHostRspackConfig({
   dirname,
   entry,
@@ -100,7 +108,7 @@ export function createHostRspackConfig({
       ],
     },
     resolve: {
-      ...Repack.getResolveOptions(),
+      ...Repack.getResolveOptions({ enablePackageExports: true }),
       modules: [
         'node_modules',
         path.resolve(dirname, 'node_modules'),
@@ -164,7 +172,7 @@ export function createRemoteRspackConfig({
     context: dirname,
     entry,
     resolve: {
-      ...Repack.getResolveOptions(),
+      ...Repack.getResolveOptions({ enablePackageExports: true }),
       modules: [
         'node_modules',
         path.resolve(dirname, 'node_modules'),

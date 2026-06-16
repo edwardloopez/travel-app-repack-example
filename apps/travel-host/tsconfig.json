@@ -7,7 +7,13 @@
     "jsx": "react-native",
     "types": ["node"],
     "paths": {
-      "travel-sdk": ["../../packages/travel-sdk/index.js"]
+      "travel-sdk": ["../../packages/travel-sdk/index.js"],
+      "travel-sdk/lib/remotesCatalog.json": [
+        "../../packages/travel-sdk/lib/remotesCatalog.json"
+      ],
+      "travel-sdk/lib/remoteVersions.json": [
+        "../../packages/travel-sdk/lib/remoteVersions.json"
+      ]
     }
   }
 }

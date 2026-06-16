@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Travel App — Module Federation context for Argent
 
-This monorepo uses **Re.Pack (rspack)**, not Metro. Do **not** use `metro-mcp` or assume a single bundler.
+This monorepo uses **Re.Pack 5.2.5 (rspack)** with **Module Federation 2.5.1**, not Metro. Do **not** use `metro-mcp` or assume a single bundler.
 
 ## App identity
 

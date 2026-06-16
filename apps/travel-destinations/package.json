@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.28.4",
-    "@module-federation/enhanced": "0.13.1",
+    "@module-federation/enhanced": "2.5.1",
     "react": "19.1.0",
     "react-native": "0.80.2",
     "react-native-config": "1.5.6",
@@ -35,11 +35,11 @@
     }
   },
   "devDependencies": {
-    "@callstack/repack": "5.2.0",
+    "@callstack/repack": "5.2.5",
     "@react-native-community/cli": "15.0.1",
     "@react-native/eslint-config": "0.80.2",
     "@react-native/typescript-config": "0.80.2",
-    "@rspack/core": "^1.2.2",
+    "@rspack/core": "^1.4.0",
     "@types/jest": "^29.5.14",
     "@types/react": "19.1.12",
     "babel-plugin-transform-remove-console": "^6.9.4",

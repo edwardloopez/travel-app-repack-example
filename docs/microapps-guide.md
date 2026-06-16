@@ -103,9 +103,9 @@ graph TB
 |------------|-------------------|-----|
 | React Native | 0.80.2 | Framework móvil |
 | React | 19.1.0 | UI library |
-| Re.Pack | 5.2.0 | Bundler con MF para RN |
+| Re.Pack | 5.2.5 | Bundler con MF para RN |
 | Rspack | ^1.4.0 | Motor de bundling (Rust) |
-| Module Federation | 0.13.1 | Runtime de federación |
+| Module Federation | 2.5.1 | Runtime de federación (`enhanced` + `runtime`) |
 | Expo | ~53 | Tooling nativo (host) |
 | pnpm + concurrently | — | Monorepo y `pnpm start` (host + remotes) |
 
@@ -697,7 +697,7 @@ Antes de implementar micro-apps en producción, responde:
 
 ---
 
-**Última actualización:** junio 2026 — React Native 0.80.2, Re.Pack 5.2.0, MF 0.13.1, Expo 53 (host), modos dev/prod (`__DEV__`), retry de descarga, `app.config.ts`.
+**Última actualización:** junio 2026 — React Native 0.80.2, Re.Pack 5.2.5, MF 2.5.1, Expo 53 (host), modos dev/prod (`__DEV__`), retry de descarga, `app.config.ts`.
 
 ---
 
