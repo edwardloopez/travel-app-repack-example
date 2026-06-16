@@ -9,7 +9,6 @@ import {
   getHostIp,
   getRemoteProfile,
   getStaticBaseUrl,
-  loadRemoteRegistry,
   type RemoteRegistry,
 } from './remoteRegistry';
 import { mfTrace } from './mfTrace';
@@ -122,24 +121,6 @@ export function applyRemoteConfig(registry: RemoteRegistry): VersionedRemoteConf
     })),
   });
   return config;
-}
-
-export async function loadRemoteConfig(
-  registry?: RemoteRegistry
-): Promise<VersionedRemoteConfig> {
-  if (registry) {
-    return applyRemoteConfig(registry);
-  }
-
-  try {
-    const loaded = await loadRemoteRegistry();
-    return applyRemoteConfig(loaded);
-  } catch (error) {
-    console.warn('Failed to load remote config, using defaults:', error);
-    const fallback = buildRemoteConfig();
-    setActiveRemoteConfig(fallback);
-    return fallback;
-  }
 }
 
 export function extractRemoteNameFromUrl(url: string): string | null {

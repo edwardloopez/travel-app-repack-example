@@ -2,7 +2,9 @@ import type { FederationRuntimePlugin } from '@module-federation/runtime-tools/r
 
 const MAX_ATTEMPTS = 3;
 const BASE_DELAY_MS = 500;
-/** Must match travel-core manifestCache.ts legacyCacheKey format. */
+/**
+ * Must match travel-core manifestCache.ts legacyCacheKey format.
+ * */
 const MANIFEST_CACHE_PREFIX = 'mf_manifest_';
 
 type AsyncStorageLike = {
@@ -10,10 +12,146 @@ type AsyncStorageLike = {
   setItem(key: string, value: string): Promise<void>;
 };
 
-/** Session cache when AsyncStorage native module is not ready yet. */
+/**
+ * Session cache when AsyncStorage native module is not ready yet.
+ * */
 const memoryManifestCache = new Map<string, string>();
 
 let asyncStorageModule: AsyncStorageLike | null | undefined;
+
+/**
+ * POC fetch plugin: direct manifest/bundle download without auth.
+ * Self-contained (no travel-core) — runs inside the MF runtime plugin bundle.
+ *
+ * Manifest offline: primary path in `fetch` (return cached Response).
+ * Backup path in `errorLoadRemote` when resolution still fails (`afterResolve`).
+ */
+export default function (): FederationRuntimePlugin {
+  return {
+    name: 'mf-fetch-plugin',
+
+    async fetch(url: string, options: RequestInit) {
+      const isManifest = url.includes('mf-manifest.json');
+
+      if (isManifest) {
+        return fetchManifest(url, options);
+      }
+
+      return fetchWithRetries(url, options, {
+        type: url.includes('.container.js.bundle') ? 'container' : 'chunk/asset',
+      });
+    },
+
+    async errorLoadRemote({ id, error, lifecycle }) {
+      if (lifecycle !== 'afterResolve') {
+        console.error('[MF:Trace] 8.fetch.error', { id, lifecycle, error });
+        return;
+      }
+
+      const cached = await getCachedManifest(id);
+      if (!cached) {
+        console.error('[MF:Trace] 8.fetch.error', { id, lifecycle, error, cacheHit: false });
+        return;
+      }
+
+      console.log('[MF:Trace] 8.fetch.errorLoadRemote.cache', { id });
+      return JSON.parse(cached) as unknown;
+    },
+  };
+}
+
+async function fetchManifest(url: string, options: RequestInit): Promise<Response> {
+  const startedAt = Date.now();
+
+  console.log('[MF:Trace] 8.fetch.start', { url, type: 'manifest' });
+
+  try {
+    const response = await fetchWithRetries(url, options, { type: 'manifest' });
+
+    if (response.ok) {
+      await setCachedManifest(url, await response.clone().text());
+      return response;
+    }
+
+    const offline = await offlineManifestResponse(url);
+    if (offline) {
+      console.log('[MF:Trace] 8.fetch.offlineManifest', {
+        url,
+        status: response.status,
+        durationMs: Date.now() - startedAt,
+      });
+      return offline;
+    }
+
+    return response;
+  } catch (error) {
+    const offline = await offlineManifestResponse(url);
+    if (offline) {
+      console.log('[MF:Trace] 8.fetch.offlineManifest', {
+        url,
+        durationMs: Date.now() - startedAt,
+      });
+      return offline;
+    }
+
+    throw error;
+  }
+}
+
+async function fetchWithRetries(
+  url: string,
+  options: RequestInit,
+  meta: { type: string }
+): Promise<Response> {
+  const startedAt = Date.now();
+  console.log('[MF:Trace] 8.fetch.start', { url, type: meta.type });
+
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      if (!response.ok && attempt < MAX_ATTEMPTS) {
+        console.warn(
+          `MF Fetch retry ${attempt}/${MAX_ATTEMPTS}: ${url} (${response.status})`
+        );
+        await sleep(BASE_DELAY_MS * attempt);
+        continue;
+      }
+
+      console.log('[MF:Trace] 8.fetch.ok', {
+        url,
+        type: meta.type,
+        status: response.status,
+        durationMs: Date.now() - startedAt,
+        attempts: attempt,
+      });
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt < MAX_ATTEMPTS) {
+        console.warn(`MF Fetch retry ${attempt}/${MAX_ATTEMPTS}: ${url}`, error);
+        await sleep(BASE_DELAY_MS * attempt);
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+async function offlineManifestResponse(url: string): Promise<Response | null> {
+  const cached = await getCachedManifest(url);
+  if (!cached) {
+    return null;
+  }
+
+  return new Response(cached, {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -33,7 +171,6 @@ function getAsyncStorage(): AsyncStorageLike | null {
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('@react-native-async-storage/async-storage') as {
       default?: AsyncStorageLike;
     };
@@ -80,92 +217,4 @@ async function setCachedManifest(url: string, body: string): Promise<void> {
   } catch (error) {
     console.warn('mf-fetch-plugin: failed to write manifest cache', error);
   }
-}
-
-function offlineManifestResponse(cached: string): Response {
-  return new Response(cached, {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-/**
- * POC fetch plugin: direct manifest/bundle download without auth.
- * Self-contained (no travel-core) — runs inside the MF runtime plugin bundle.
- * Caches mf-manifest.json for offline replay when CDN is down.
- */
-export default function (): FederationRuntimePlugin {
-  return {
-    name: 'mf-fetch-plugin',
-    async fetch(url: string, options: RequestInit) {
-      const startedAt = Date.now();
-      const isManifest = url.includes('mf-manifest.json');
-      const isContainer = url.includes('.container.js.bundle');
-
-      console.log('MF Fetch:', {
-        url,
-        type: isManifest ? 'manifest' : isContainer ? 'container' : 'asset',
-      });
-      console.log('[MF:Trace] 8.fetch.start', {
-        url,
-        type: isManifest ? 'manifest' : isContainer ? 'container' : 'chunk/asset',
-      });
-
-      let lastError: unknown;
-
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        try {
-          const response = await fetch(url, options);
-
-          if (!response.ok && attempt < MAX_ATTEMPTS) {
-            console.warn(
-              `MF Fetch retry ${attempt}/${MAX_ATTEMPTS}: ${url} (${response.status})`
-            );
-            await sleep(BASE_DELAY_MS * attempt);
-            continue;
-          }
-
-          if (response.ok && isManifest) {
-            const body = await response.clone().text();
-            await setCachedManifest(url, body);
-          }
-
-          console.log('MF Fetch complete:', {
-            url,
-            status: response.status,
-            durationMs: Date.now() - startedAt,
-            attempts: attempt,
-          });
-          console.log('[MF:Trace] 8.fetch.ok', {
-            url,
-            status: response.status,
-            durationMs: Date.now() - startedAt,
-            attempts: attempt,
-          });
-
-          return response;
-        } catch (error) {
-          lastError = error;
-          if (attempt < MAX_ATTEMPTS) {
-            console.warn(
-              `MF Fetch retry ${attempt}/${MAX_ATTEMPTS}: ${url}`,
-              error
-            );
-            await sleep(BASE_DELAY_MS * attempt);
-            continue;
-          }
-        }
-      }
-
-      if (isManifest) {
-        const cached = await getCachedManifest(url);
-        if (cached) {
-          console.log('[MF:Trace] 8.fetch.offlineManifest', { url });
-          return offlineManifestResponse(cached);
-        }
-      }
-
-      throw lastError;
-    },
-  };
 }
