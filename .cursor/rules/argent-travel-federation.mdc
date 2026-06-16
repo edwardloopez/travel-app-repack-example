@@ -1,0 +1,104 @@
+---
+description: Travel App Module Federation — Repack/Re.Pack dev workflow, ports, and runtime observability for Argent sessions
+alwaysApply: true
+---
+
+# Travel App — Module Federation context for Argent
+
+This monorepo uses **Re.Pack (rspack)**, not Metro. Do **not** use `metro-mcp` or assume a single bundler.
+
+## App identity
+
+| Field | Value |
+|-------|-------|
+| Host app | `TravelHost` |
+| Bundle ID (iOS) | `com.anonymous.travelhost` |
+| Package (Android) | `com.anonymous.travelhost` |
+| New Architecture | enabled (`newArchEnabled: true`) |
+
+## Dev commands (run from repo root)
+
+```bash
+# Modo A — live federation (host + 4 remotes)
+pnpm start
+
+# Launch app (no bundler — uses running dev servers)
+pnpm run:travel-host:ios
+pnpm run:travel-host:android
+
+# Modo B — prod-like CDN (pre-built bundles)
+pnpm serve:remotes          # :4100
+pnpm start:travel-host      # host only on :8081
+
+# Android port forwarding (required before Android testing)
+pnpm adbreverse
+```
+
+## Port map
+
+| Service | Port |
+|---------|------|
+| TravelHost bundler | 8081 |
+| TravelWeather | 9000 |
+| TravelDestinations | 9001 |
+| TravelSearch | 9002 |
+| TravelPhotos | 9003 |
+| Pre-built remotes CDN (`serve:remotes`) | 4100 |
+
+## Architecture to observe
+
+- **Bootstrap gate**: `packages/travel-core/src/hooks/useRemoteBootstrap.ts` → `apps/travel-host/src/components/RemoteBootstrapGate.tsx`
+  - Shows "Preparing micro-apps..." while `isBootstrapping` is true
+- **Lazy remotes**: `apps/travel-host/src/federation/createLazyFederatedScreen.tsx`
+  - Screens: Weather, Destinations, Search, Photos (`apps/travel-host/src/navigation/MainNavigator.tsx`)
+- **Prefetch (prod only)**: `PRELOAD_REMOTES = ['TravelWeather', 'TravelSearch']` in `useRemoteBootstrap.ts`
+- **In-memory screen cache**: `federatedScreenCache` in `createLazyFederatedScreen.tsx`
+
+## Navigation flow
+
+1. App boots → bootstrap screen → Home (`Travel App` title)
+2. Home shows feature cards from `enabledFeatures` (dynamic from `remote-registry.json`)
+3. Tap a card → navigates to Weather / Destinations / Search / Photos
+
+## Logs to filter
+
+Federation tracing uses `[MF:Trace]` prefix (`packages/travel-core/src/utils/mfTrace.ts`).
+
+Key bootstrap sequence:
+- `0.bootstrap.start` → `0.bootstrap.done` or `0.bootstrap.error`
+- `1.registry.*` — registry fetch
+- `2.registerRemotes.*` — dynamic remote registration
+- `3.cache.*` — bundle cache invalidation
+- `4.prefetch.*` — prod prefetch (skipped in dev profile)
+
+`App.tsx` sets `LogBox.ignoreAllLogs(true)` — read console via Argent debugger tools, not LogBox UI.
+
+## Smoke test checklist
+
+Before interacting, verify dev servers are running:
+- Modo A: `pnpm start` (5 processes) OR individual `start:travel-*` scripts
+- Modo B: `pnpm serve:remotes` + `pnpm start:travel-host`
+
+Then:
+1. Launch `com.anonymous.travelhost`
+2. Screenshot bootstrap → Home
+3. Navigate to each remote (4 cards)
+4. Read `[MF:Trace]` logs
+5. Modo B: stop `serve:remotes`, navigate to Photos, verify fallback/retry UI
+
+## Baseline scenarios (architecture optimization)
+
+| Scenario | What to measure |
+|----------|-----------------|
+| Cold start | Bootstrap duration → Home visible |
+| TTI per remote | Tap card → remote content interactive |
+| Repeat visit | Second navigation to same remote (cache hit?) |
+| CDN down | `serve:remotes` off → fallback UX + reachability timeout |
+| Profiling | React profiler when remote mounts |
+
+See `docs/argent-baseline.md` for measurement template.
+
+## Do not use for
+
+- E2E test automation (use Maestro/Detox separately if needed)
+- `metro-mcp` (incompatible with Re.Pack/rspack)
