@@ -19,8 +19,12 @@ export { formatCurrency } from './utils/formatters';
 export * from './utils/bundleVersioning';
 export * from './utils/remoteRegistry';
 export { setRemoteRegistryUrl } from './utils/appConfig';
-export { BundleCacheManager, useBundleCache, useLiveCacheStats } from './utils/bundleCacheManager';
-export type { BundleCacheStats } from './utils/bundleCacheManager';
+export { BundleCacheManager, useBundleCache } from './utils/bundleCacheManager';
+export {
+  getBundleCacheStats,
+  useLiveCacheStats,
+} from './utils/bundleCacheStats';
+export type { BundleCacheStats } from './utils/bundleCacheStats';
 export {
   clearCachedManifest,
   getCachedManifest,

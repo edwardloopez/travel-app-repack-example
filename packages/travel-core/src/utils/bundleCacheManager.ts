@@ -1,63 +1,71 @@
 import { ScriptManager } from '@callstack/repack/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import {
-  extractPlatformFromUrl,
   generateVersionedCacheKey,
   getActiveRemoteConfig,
   getContainerUrl,
   getRemoteVersion,
-  resolveRemoteNameFromCacheUrl,
   type VersionedRemoteConfig,
-} from '../utils/bundleVersioning';
-import { mfTrace } from '../utils/mfTrace';
+} from './bundleVersioning';
+import { mfTrace } from './mfTrace';
 import { clearCachedManifest, hasCachedManifest } from './manifestCache';
-import { retryWithBackoff } from '../utils/retryWithBackoff';
+import { retryWithBackoff } from './retryWithBackoff';
+import {
+  findScriptIdsForRemote,
+  isScriptManagerCacheKey,
+  readScriptManagerCache,
+} from './scriptManagerCacheAccess';
 
 /**
- * Bundle Cache Management Utilities
- *
- * Provides functions to manage cached bundles, handle updates,
- * and perform cache invalidation based on versions
+ * Bundle cache orchestration for Module Federation (invalidation, prefetch, offline checks).
  */
-
-export type BundleCacheStats = {
-  totalBundles: number;
-  totalSize: number;
-  cacheDisabled: boolean;
-  bundles: Array<{
-    uniqueId: string;
-    name: string;
-    kind: 'container' | 'chunk' | 'unknown';
-    platform: string;
-    version: string;
-    size: number;
-    url?: string;
-  }>;
-};
 
 type CacheChangeListener = () => void;
 const cacheChangeListeners = new Set<CacheChangeListener>();
 
-/**
- * Called when ScriptManager persists cache metadata to storage.
- * @internal
- */
+/** Called when ScriptManager persists cache metadata to storage. */
 export function notifyBundleCacheChanged(): void {
   cacheChangeListeners.forEach(listener => listener());
 }
+
+/** Subscribe to ScriptManager cache changes (loads, prefetch, invalidation). */
+export function subscribeToScriptCacheChanges(onChange: () => void): () => void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const debounced = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      timeoutId = null;
+      onChange();
+    }, 200);
+  };
+
+  cacheChangeListeners.add(debounced);
+
+  const manager = ScriptManager.shared as typeof ScriptManager.shared & {
+    on(event: 'loaded' | 'invalidated', handler: () => void): void;
+    off(event: 'loaded' | 'invalidated', handler: () => void): void;
+  };
+  const events = ['loaded', 'invalidated'] as const;
+  events.forEach(event => manager.on(event, debounced));
+
+  return () => {
+    cacheChangeListeners.delete(debounced);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    events.forEach(event => manager.off(event, debounced));
+  };
+}
+
+export { isScriptManagerCacheKey };
 
 export class BundleCacheManager {
   private static readonly VERSION_PREFIX = 'bundle_version_';
   private static readonly CONTENT_PREFIX = 'bundle_content_';
   private static readonly INSTALLED_VERSION_PREFIX = 'bundle_installed_';
-  /**
-   * Re.Pack ScriptManager metadata key (bundle files live on native FS).
-   * */
-  private static readonly SCRIPT_MANAGER_CACHE_KEY = `Repack.ScriptManager.Cache.v4.${
-    __DEV__ ? 'debug' : 'release'
-  }`;
 
   private static installedVersionKey(
     remoteName: string,
@@ -91,113 +99,6 @@ export class BundleCacheManager {
     await AsyncStorage.removeItem(this.installedVersionKey(remoteName, platform));
   }
 
-  static isScriptManagerCacheKey(key: string): boolean {
-    return key.startsWith('Repack.ScriptManager.Cache');
-  }
-
-  /**
-   * Subscribe to ScriptManager cache changes (loads, prefetch, invalidation).
-   */
-  static subscribeToScriptCacheChanges(onChange: () => void): () => void {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    const debounced = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      timeoutId = setTimeout(() => {
-        timeoutId = null;
-        onChange();
-      }, 200);
-    };
-
-    cacheChangeListeners.add(debounced);
-
-    const manager = ScriptManager.shared as typeof ScriptManager.shared & {
-      on(event: 'loaded' | 'invalidated', handler: () => void): void;
-      off(event: 'loaded' | 'invalidated', handler: () => void): void;
-    };
-    const events = ['loaded', 'invalidated'] as const;
-    events.forEach(event => manager.on(event, debounced));
-
-    return () => {
-      cacheChangeListeners.delete(debounced);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      events.forEach(event => manager.off(event, debounced));
-    };
-  }
-
-  private static async parseScriptManagerCacheEntry(
-    uniqueId: string,
-    entry: { url?: string }
-  ): Promise<BundleCacheStats['bundles'][number] | null> {
-    const url = entry.url;
-    if (!url) {
-      return null;
-    }
-
-    const remoteName = resolveRemoteNameFromCacheUrl(url);
-    const name =
-      remoteName || uniqueId.split('_').pop() || uniqueId;
-    const kind = url.includes('.container.js.bundle')
-      ? 'container'
-      : url.includes('.chunk.bundle') || url.includes('__federation_expose_')
-        ? 'chunk'
-        : 'unknown';
-    const platform = extractPlatformFromUrl(url);
-    const installedVersion =
-      remoteName != null
-        ? await this.getInstalledVersion(remoteName, platform)
-        : null;
-
-    return {
-      uniqueId,
-      name,
-      kind,
-      platform,
-      version:
-        installedVersion ??
-        (remoteName ? getRemoteVersion(remoteName) : 'unknown'),
-      size: 0,
-      url,
-    };
-  }
-
-  private static async readScriptManagerCache(): Promise<
-    Record<string, { url?: string }>
-  > {
-    const scriptManagerRaw = await AsyncStorage.getItem(
-      this.SCRIPT_MANAGER_CACHE_KEY
-    );
-    if (!scriptManagerRaw) {
-      return {};
-    }
-    return JSON.parse(scriptManagerRaw) as Record<string, { url?: string }>;
-  }
-
-  private static findScriptIdsForRemote(
-    cache: Record<string, { url?: string }>,
-    remoteName: string,
-    platform: string
-  ): string[] {
-    return Object.entries(cache)
-      .filter(([, entry]) => {
-        if (!entry.url) {
-          return false;
-        }
-        const resolved = resolveRemoteNameFromCacheUrl(entry.url);
-        return (
-          resolved === remoteName &&
-          extractPlatformFromUrl(entry.url) === platform
-        );
-      })
-      .map(([uniqueId]) => uniqueId);
-  }
-
-  /**
-   * Invalidate specific ScriptManager cache entries (container/chunk).
-   */
   static async invalidateCacheEntries(uniqueIds: string[]): Promise<void> {
     if (uniqueIds.length === 0) {
       return;
@@ -212,9 +113,6 @@ export class BundleCacheManager {
     }
   }
 
-  /**
-   * Invalidate cache for a specific remote and platform
-   */
   static async invalidateRemote(
     remoteName: string,
     platform: string,
@@ -248,8 +146,8 @@ export class BundleCacheManager {
       await this.clearInstalledVersion(remoteName, platform);
       await clearCachedManifest(remoteName, platform);
 
-      const cache = await this.readScriptManagerCache();
-      const scriptIds = this.findScriptIdsForRemote(cache, remoteName, platform);
+      const cache = await readScriptManagerCache();
+      const scriptIds = findScriptIdsForRemote(cache, remoteName, platform);
       await this.invalidateCacheEntries(scriptIds);
 
       if (scriptIds.length > 0) {
@@ -262,9 +160,6 @@ export class BundleCacheManager {
     }
   }
 
-  /**
-   * Invalidate all cached bundles
-   */
   static async invalidateAll(): Promise<void> {
     try {
       const allKeys = await AsyncStorage.getAllKeys();
@@ -282,7 +177,6 @@ export class BundleCacheManager {
         );
       }
 
-      // ScriptManager: clears metadata + native filesystem bundles
       await ScriptManager.shared.invalidateScripts();
       notifyBundleCacheChanged();
     } catch (error) {
@@ -290,91 +184,6 @@ export class BundleCacheManager {
     }
   }
 
-  /**
-   * Get cache statistics
-   */
-  static async getCacheStats(): Promise<BundleCacheStats> {
-    try {
-      const scriptManagerRaw = await AsyncStorage.getItem(
-        this.SCRIPT_MANAGER_CACHE_KEY
-      );
-
-      if (scriptManagerRaw) {
-        const cache = JSON.parse(scriptManagerRaw) as Record<
-          string,
-          { url?: string }
-        >;
-        const bundles = (
-          await Promise.all(
-            Object.entries(cache).map(([uniqueId, entry]) =>
-              this.parseScriptManagerCacheEntry(uniqueId, entry)
-            )
-          )
-        ).filter((entry): entry is NonNullable<typeof entry> => entry != null);
-
-        return {
-          totalBundles: bundles.length,
-          totalSize: 0,
-          cacheDisabled: __DEV__,
-          bundles,
-        };
-      }
-
-      // Legacy AsyncStorage content keys (unused by Re.Pack ScriptManager).
-      const allKeys = await AsyncStorage.getAllKeys();
-      const versionKeys = allKeys.filter(key =>
-        key.startsWith(this.VERSION_PREFIX)
-      );
-
-      const bundles = [];
-      let totalSize = 0;
-
-      for (const versionKey of versionKeys) {
-        const version = await AsyncStorage.getItem(versionKey);
-        const contentKey = versionKey.replace(
-          this.VERSION_PREFIX,
-          this.CONTENT_PREFIX
-        );
-        const content = await AsyncStorage.getItem(contentKey);
-
-        if (version && content) {
-          const bundleKey = versionKey.replace(this.VERSION_PREFIX, '');
-          const [, name, platform] = bundleKey.split('_');
-          const size = content.length;
-
-          bundles.push({
-            uniqueId: versionKey,
-            name,
-            kind: 'unknown' as const,
-            platform,
-            version,
-            size,
-          });
-
-          totalSize += size;
-        }
-      }
-
-      return {
-        totalBundles: bundles.length,
-        totalSize,
-        cacheDisabled: __DEV__,
-        bundles,
-      };
-    } catch (error) {
-      console.error('BundleCache: Error getting cache stats:', error);
-      return {
-        totalBundles: 0,
-        totalSize: 0,
-        cacheDisabled: __DEV__,
-        bundles: [],
-      };
-    }
-  }
-
-  /**
-   * True when ScriptManager has entries for this remote at the registry version.
-   */
   static async hasCachedBundle(
     remoteName: string,
     platform: string = Platform.OS
@@ -384,15 +193,10 @@ export class BundleCacheManager {
       return false;
     }
 
-    const cache = await this.readScriptManagerCache();
-    return (
-      this.findScriptIdsForRemote(cache, remoteName, platform).length > 0
-    );
+    const cache = await readScriptManagerCache();
+    return findScriptIdsForRemote(cache, remoteName, platform).length > 0;
   }
 
-  /**
-   * Offline-ready: versioned manifest + ScriptManager bundles on disk.
-   */
   static async canLoadOffline(
     remoteName: string,
     platform: string = Platform.OS
@@ -404,16 +208,13 @@ export class BundleCacheManager {
     return manifest && bundle;
   }
 
-  /**
-   * Check for bundle updates and invalidate outdated caches
-   */
   static async checkForUpdates(
     remoteConfig: VersionedRemoteConfig = getActiveRemoteConfig()
   ): Promise<string[]> {
     const updatedRemotes: string[] = [];
 
     try {
-      const scriptManagerCache = await this.readScriptManagerCache();
+      const scriptManagerCache = await readScriptManagerCache();
 
       for (const [remoteName, config] of Object.entries(remoteConfig)) {
         const platform = Platform.OS;
@@ -422,11 +223,8 @@ export class BundleCacheManager {
           platform
         );
         const hasScriptManagerEntries =
-          this.findScriptIdsForRemote(
-            scriptManagerCache,
-            remoteName,
-            platform
-          ).length > 0;
+          findScriptIdsForRemote(scriptManagerCache, remoteName, platform)
+            .length > 0;
 
         const needsInvalidation =
           hasScriptManagerEntries && installedVersion !== config.version;
@@ -454,9 +252,6 @@ export class BundleCacheManager {
     return updatedRemotes;
   }
 
-  /**
-   * Preload specific bundles (useful for critical micro-frontends)
-   */
   static async preloadBundles(
     remoteNames: string[],
     platform: string,
@@ -503,67 +298,22 @@ export class BundleCacheManager {
   }
 }
 
-/**
- * React Hook for bundle cache management
- */
 export function useBundleCache() {
-  const invalidateRemote = (
-    remoteName: string,
-    platform: string,
-    version?: string
-  ) => BundleCacheManager.invalidateRemote(remoteName, platform, version);
-
-  const invalidateCacheEntry = (uniqueId: string) =>
-    BundleCacheManager.invalidateCacheEntries([uniqueId]);
-
-  const invalidateAll = () => BundleCacheManager.invalidateAll();
-
-  const getCacheStats = () => BundleCacheManager.getCacheStats();
-
-  const checkForUpdates = (config?: VersionedRemoteConfig) =>
-    BundleCacheManager.checkForUpdates(config);
-
-  const preloadBundles = (
-    remoteNames: string[],
-    platform: string,
-    config?: VersionedRemoteConfig
-  ) => BundleCacheManager.preloadBundles(remoteNames, platform, config);
-
   return {
-    invalidateRemote,
-    invalidateCacheEntry,
-    invalidateAll,
-    getCacheStats,
-    checkForUpdates,
-    preloadBundles,
+    invalidateRemote: (
+      remoteName: string,
+      platform: string,
+      version?: string
+    ) => BundleCacheManager.invalidateRemote(remoteName, platform, version),
+    invalidateCacheEntry: (uniqueId: string) =>
+      BundleCacheManager.invalidateCacheEntries([uniqueId]),
+    invalidateAll: () => BundleCacheManager.invalidateAll(),
+    checkForUpdates: (config?: VersionedRemoteConfig) =>
+      BundleCacheManager.checkForUpdates(config),
+    preloadBundles: (
+      remoteNames: string[],
+      platform: string,
+      config?: VersionedRemoteConfig
+    ) => BundleCacheManager.preloadBundles(remoteNames, platform, config),
   };
-}
-
-/**
- * Keeps cache stats in sync with ScriptManager writes and navigation focus.
- */
-export function useLiveCacheStats(enabled = true) {
-  const [cacheStats, setCacheStats] = useState<BundleCacheStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    try {
-      setCacheStats(await BundleCacheManager.getCacheStats());
-    } catch (error) {
-      console.error('Error loading cache data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-
-    refresh();
-    return BundleCacheManager.subscribeToScriptCacheChanges(refresh);
-  }, [enabled, refresh]);
-
-  return { cacheStats, loading, refresh };
 }

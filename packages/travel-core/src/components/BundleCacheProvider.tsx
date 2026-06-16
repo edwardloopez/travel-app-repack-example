@@ -12,7 +12,7 @@ import {
 import { setupTravelScriptResolver } from '../utils/scriptManagerResolver';
 import { mfTrace } from '../utils/mfTrace';
 import {
-  BundleCacheManager,
+  isScriptManagerCacheKey,
   notifyBundleCacheChanged,
 } from '../utils/bundleCacheManager';
 
@@ -123,7 +123,7 @@ class VersionedBundleStorage {
         });
       }
 
-      if (BundleCacheManager.isScriptManagerCacheKey(key)) {
+      if (isScriptManagerCacheKey(key)) {
         notifyBundleCacheChanged();
       }
     } catch (error) {
