@@ -45,14 +45,14 @@ const BundleCacheDebugScreen: React.FC = () => {
     if (!registry) {
       return;
     }
-    setRemoteConfig(applyRemoteConfig(registry));
+    void applyRemoteConfig(registry).then(setRemoteConfig);
   }, [registry]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
       const nextRegistry = await refreshRegistry();
-      setRemoteConfig(applyRemoteConfig(nextRegistry));
+      setRemoteConfig(await applyRemoteConfig(nextRegistry));
       await refreshCacheStats();
     } catch (error) {
       console.error('Error refreshing registry:', error);

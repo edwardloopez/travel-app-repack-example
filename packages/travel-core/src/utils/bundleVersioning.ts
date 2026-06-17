@@ -11,6 +11,7 @@ import {
   type RemoteRegistry,
 } from './remoteRegistry';
 import { mfTrace } from './mfTrace';
+import { persistRegistrySnapshot } from './registrySnapshot';
 
 export interface BundleVersion {
   name: string;
@@ -43,24 +44,6 @@ export function getRemoteVersion(remoteName: string): string {
   return config[remoteName]?.version || '1.0.0';
 }
 
-export function generateVersionedCacheKey(
-  remoteName: string,
-  platform: string,
-  version: string
-): string {
-  return `bundle_${remoteName}_${platform}_${version}`;
-}
-
-export function isVersionCompatible(
-  currentVersion: string,
-  cachedVersion: string
-): boolean {
-  const [currentMajor, currentMinor] = currentVersion.split('.').map(Number);
-  const [cachedMajor, cachedMinor] = cachedVersion.split('.').map(Number);
-
-  return currentMajor === cachedMajor && currentMinor >= cachedMinor;
-}
-
 export function remoteConfigFromRegistry(
   registry: RemoteRegistry
 ): VersionedRemoteConfig {
@@ -77,11 +60,16 @@ export function remoteConfigFromRegistry(
   }, {} as VersionedRemoteConfig);
 }
 
-/** Apply URLs/versions from an already-loaded registry (no fetch). */
-export function applyRemoteConfig(registry: RemoteRegistry): VersionedRemoteConfig {
+/**
+ * Apply URLs/versions from an already-loaded registry (no fetch).
+ * */
+export async function applyRemoteConfig(
+  registry: RemoteRegistry
+): Promise<VersionedRemoteConfig> {
   setActiveRegistry(registry);
   const config = remoteConfigFromRegistry(registry);
   setActiveRemoteConfig(config);
+  await persistRegistrySnapshot(registry);
   mfTrace('2.remoteConfig.applied', {
     remotes: Object.values(config).map(c => ({
       name: c.name,

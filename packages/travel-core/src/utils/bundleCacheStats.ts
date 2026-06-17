@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { BundleCacheManager } from './bundleCacheManager';
 import {
@@ -24,9 +23,6 @@ export type BundleCacheStats = {
     url?: string;
   }>;
 };
-
-const LEGACY_VERSION_PREFIX = 'bundle_version_';
-const LEGACY_CONTENT_PREFIX = 'bundle_content_';
 
 async function parseScriptManagerCacheEntry(
   uniqueId: string,
@@ -66,62 +62,17 @@ async function parseScriptManagerCacheEntry(
 export async function getBundleCacheStats(): Promise<BundleCacheStats> {
   try {
     const cache = await readScriptManagerCache();
-
-    if (Object.keys(cache).length > 0) {
-      const bundles = (
-        await Promise.all(
-          Object.entries(cache).map(([uniqueId, entry]) =>
-            parseScriptManagerCacheEntry(uniqueId, entry)
-          )
+    const bundles = (
+      await Promise.all(
+        Object.entries(cache).map(([uniqueId, entry]) =>
+          parseScriptManagerCacheEntry(uniqueId, entry)
         )
-      ).filter((entry): entry is NonNullable<typeof entry> => entry != null);
-
-      return {
-        totalBundles: bundles.length,
-        totalSize: 0,
-        cacheDisabled: __DEV__,
-        bundles,
-      };
-    }
-
-    // Legacy AsyncStorage content keys (unused by Re.Pack ScriptManager).
-    const allKeys = await AsyncStorage.getAllKeys();
-    const versionKeys = allKeys.filter(key =>
-      key.startsWith(LEGACY_VERSION_PREFIX)
-    );
-
-    const bundles = [];
-    let totalSize = 0;
-
-    for (const versionKey of versionKeys) {
-      const version = await AsyncStorage.getItem(versionKey);
-      const contentKey = versionKey.replace(
-        LEGACY_VERSION_PREFIX,
-        LEGACY_CONTENT_PREFIX
-      );
-      const content = await AsyncStorage.getItem(contentKey);
-
-      if (version && content) {
-        const bundleKey = versionKey.replace(LEGACY_VERSION_PREFIX, '');
-        const [, name, platform] = bundleKey.split('_');
-        const size = content.length;
-
-        bundles.push({
-          uniqueId: versionKey,
-          name,
-          kind: 'unknown' as const,
-          platform,
-          version,
-          size,
-        });
-
-        totalSize += size;
-      }
-    }
+      )
+    ).filter((entry): entry is NonNullable<typeof entry> => entry != null);
 
     return {
       totalBundles: bundles.length,
-      totalSize,
+      totalSize: 0,
       cacheDisabled: __DEV__,
       bundles,
     };

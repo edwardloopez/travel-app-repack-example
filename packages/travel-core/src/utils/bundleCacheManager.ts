@@ -2,7 +2,9 @@ import { ScriptManager } from '@callstack/repack/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import {
-  generateVersionedCacheKey,
+  MANIFEST_CACHE_PREFIX,
+} from 'travel-sdk/lib/manifestCacheKeys.js';
+import {
   getActiveRemoteConfig,
   getContainerUrl,
   getRemoteVersion,
@@ -13,16 +15,24 @@ import { clearCachedManifest, hasCachedManifest } from './manifestCache';
 import { retryWithBackoff } from './retryWithBackoff';
 import {
   findScriptIdsForRemote,
-  isScriptManagerCacheKey,
   readScriptManagerCache,
 } from './scriptManagerCacheAccess';
 
 /**
- * Bundle cache orchestration for Module Federation (invalidation, prefetch, offline checks).
+ * Bundle cache orchestration for Module Federation.
+ *
+ * Offline-ready contract:
+ *   hasCachedManifest(name, platform, registryVersion)
+ *   AND ScriptManager has entries for that remote
+ *   AND bundle_installed_{name}_{platform} === registryVersion
  */
 
 type CacheChangeListener = () => void;
 const cacheChangeListeners = new Set<CacheChangeListener>();
+
+export function isScriptManagerCacheKey(key: string): boolean {
+  return key.startsWith('Repack.ScriptManager.Cache');
+}
 
 /** Called when ScriptManager persists cache metadata to storage. */
 export function notifyBundleCacheChanged(): void {
@@ -60,11 +70,7 @@ export function subscribeToScriptCacheChanges(onChange: () => void): () => void 
   };
 }
 
-export { isScriptManagerCacheKey };
-
 export class BundleCacheManager {
-  private static readonly VERSION_PREFIX = 'bundle_version_';
-  private static readonly CONTENT_PREFIX = 'bundle_content_';
   private static readonly INSTALLED_VERSION_PREFIX = 'bundle_installed_';
 
   private static installedVersionKey(
@@ -99,6 +105,19 @@ export class BundleCacheManager {
     await AsyncStorage.removeItem(this.installedVersionKey(remoteName, platform));
   }
 
+  private static async clearManifestKeysForRemote(
+    remoteName: string,
+    platform: string
+  ): Promise<void> {
+    const prefix = `${MANIFEST_CACHE_PREFIX}${remoteName}_${platform}_`;
+    const allKeys = await AsyncStorage.getAllKeys();
+    const manifestKeys = allKeys.filter(key => key.startsWith(prefix));
+
+    if (manifestKeys.length > 0) {
+      await AsyncStorage.multiRemove(manifestKeys);
+    }
+  }
+
   static async invalidateCacheEntries(uniqueIds: string[]): Promise<void> {
     if (uniqueIds.length === 0) {
       return;
@@ -115,36 +134,12 @@ export class BundleCacheManager {
 
   static async invalidateRemote(
     remoteName: string,
-    platform: string,
-    version?: string
+    platform: string
   ): Promise<void> {
     try {
-      if (version) {
-        const versionedKey = generateVersionedCacheKey(
-          remoteName,
-          platform,
-          version
-        );
-        await Promise.all([
-          AsyncStorage.removeItem(`${this.CONTENT_PREFIX}${versionedKey}`),
-          AsyncStorage.removeItem(`${this.VERSION_PREFIX}${versionedKey}`),
-        ]);
-        console.log(
-          `BundleCache: Invalidated ${remoteName} v${version} for ${platform}`
-        );
-      } else {
-        const allKeys = await AsyncStorage.getAllKeys();
-        const keysToDelete = allKeys.filter(key =>
-          key.includes(`${remoteName}_${platform}`)
-        );
-
-        if (keysToDelete.length > 0) {
-          await AsyncStorage.multiRemove(keysToDelete);
-        }
-      }
-
       await this.clearInstalledVersion(remoteName, platform);
       await clearCachedManifest(remoteName, platform);
+      await this.clearManifestKeysForRemote(remoteName, platform);
 
       const cache = await readScriptManagerCache();
       const scriptIds = findScriptIdsForRemote(cache, remoteName, platform);
@@ -163,17 +158,16 @@ export class BundleCacheManager {
   static async invalidateAll(): Promise<void> {
     try {
       const allKeys = await AsyncStorage.getAllKeys();
-      const bundleKeys = allKeys.filter(
+      const keysToRemove = allKeys.filter(
         key =>
-          key.startsWith(this.CONTENT_PREFIX) ||
-          key.startsWith(this.VERSION_PREFIX) ||
-          key.startsWith(this.INSTALLED_VERSION_PREFIX)
+          key.startsWith(this.INSTALLED_VERSION_PREFIX) ||
+          key.startsWith(MANIFEST_CACHE_PREFIX)
       );
 
-      if (bundleKeys.length > 0) {
-        await AsyncStorage.multiRemove(bundleKeys);
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
         console.log(
-          `BundleCache: Invalidated ${bundleKeys.length} cached bundles`
+          `BundleCache: Cleared ${keysToRemove.length} manifest/installed keys`
         );
       }
 
@@ -277,6 +271,7 @@ export class BundleCacheManager {
             platform,
             config.version
           );
+          notifyBundleCacheChanged();
           mfTrace('4.prefetch.script.ok', {
             remoteName,
             bundleUrl,
@@ -292,6 +287,7 @@ export class BundleCacheManager {
       });
 
       await Promise.allSettled(preloadPromises);
+      notifyBundleCacheChanged();
     } catch (error) {
       console.error('BundleCache: Error preloading bundles:', error);
     }
@@ -300,11 +296,8 @@ export class BundleCacheManager {
 
 export function useBundleCache() {
   return {
-    invalidateRemote: (
-      remoteName: string,
-      platform: string,
-      version?: string
-    ) => BundleCacheManager.invalidateRemote(remoteName, platform, version),
+    invalidateRemote: (remoteName: string, platform: string) =>
+      BundleCacheManager.invalidateRemote(remoteName, platform),
     invalidateCacheEntry: (uniqueId: string) =>
       BundleCacheManager.invalidateCacheEntries([uniqueId]),
     invalidateAll: () => BundleCacheManager.invalidateAll(),

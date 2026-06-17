@@ -1,5 +1,9 @@
 import { Platform } from 'react-native';
 import { getManifestUrl } from './bundleVersioning';
+import {
+  hasCachedManifestUrl,
+  setCachedManifest,
+} from './manifestCache';
 import { mfTrace } from './mfTrace';
 
 const DEFAULT_PROBE_TIMEOUT_MS = 3000;
@@ -28,6 +32,10 @@ export async function probeUrlReachable(
   try {
     const response = await fetch(url, { method: 'GET', signal: controller.signal });
     if (response.ok) {
+      if (url.includes('mf-manifest.json')) {
+        const body = await response.text();
+        await setCachedManifest(url, body);
+      }
       unreachableProbeCache.delete(url);
       return true;
     }
@@ -50,6 +58,16 @@ export async function isRemoteManifestReachable(
   platform: string = Platform.OS
 ): Promise<boolean> {
   const manifestUrl = getManifestUrl(remoteName, platform);
+  if (await hasCachedManifestUrl(manifestUrl)) {
+    mfTrace('1.manifest.probe', {
+      remoteName,
+      manifestUrl,
+      reachable: true,
+      source: 'cache',
+    });
+    return true;
+  }
+
   const reachable = await probeUrlReachable(manifestUrl);
   mfTrace('1.manifest.probe', { remoteName, manifestUrl, reachable });
   return reachable;

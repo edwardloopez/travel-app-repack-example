@@ -1,21 +1,25 @@
 import { Script, ScriptManager } from '@callstack/repack/client';
 import { Platform } from 'react-native';
+import { getScriptSignatureVerificationMode } from './appConfig';
 import { getActiveRemoteConfig, getContainerUrl } from './bundleVersioning';
 import { mfTrace } from './mfTrace';
 
 let installed = false;
 
-const SCRIPT_FETCH_OPTIONS = {
-  cache: !__DEV__,
-  retry: 3,
-  retryDelay: 1000,
-  verifyScriptSignature: __DEV__ ? ('off' as const) : ('strict' as const),
-};
+function getScriptFetchOptions() {
+  return {
+    cache: !__DEV__,
+    retry: 3,
+    retryDelay: 1000,
+    verifyScriptSignature: getScriptSignatureVerificationMode(),
+  };
+}
 
 function remoteScriptLocator(url: string) {
+  const fetchOptions = getScriptFetchOptions();
   return {
     url: Script.getRemoteURL(url, { excludeExtension: true }),
-    ...SCRIPT_FETCH_OPTIONS,
+    ...fetchOptions,
   };
 }
 
@@ -44,7 +48,8 @@ export function setupTravelScriptResolver() {
           scriptId,
           caller,
           url: containerUrl,
-          cache: SCRIPT_FETCH_OPTIONS.cache,
+          cache: getScriptFetchOptions().cache,
+          verifyScriptSignature: getScriptFetchOptions().verifyScriptSignature,
         });
         return remoteScriptLocator(containerUrl);
       }
@@ -61,7 +66,8 @@ export function setupTravelScriptResolver() {
             scriptId,
             caller,
             url: containerUrl,
-            cache: SCRIPT_FETCH_OPTIONS.cache,
+            cache: getScriptFetchOptions().cache,
+            verifyScriptSignature: getScriptFetchOptions().verifyScriptSignature,
           });
           return remoteScriptLocator(containerUrl);
         }

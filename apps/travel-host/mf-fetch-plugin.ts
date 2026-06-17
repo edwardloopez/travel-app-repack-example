@@ -1,23 +1,34 @@
 import type { ModuleFederationRuntimePlugin } from '@module-federation/runtime';
+import {
+  legacyManifestKey,
+  REGISTRY_SNAPSHOT_KEY,
+  resolveRemoteFromManifestUrl,
+  versionedManifestKey,
+} from '../../packages/travel-sdk/lib/manifestCacheKeys.js';
 
 const MAX_ATTEMPTS = 3;
 const BASE_DELAY_MS = 500;
-/**
- * Must match travel-core manifestCache.ts legacyCacheKey format.
- * */
-const MANIFEST_CACHE_PREFIX = 'mf_manifest_';
 
 type AsyncStorageLike = {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
 };
 
-/**
- * Session cache when AsyncStorage native module is not ready yet.
- * */
+type RegistrySnapshot = {
+  remotes: Array<{
+    name: string;
+    slug?: string;
+    devPort?: number;
+    version: string;
+    entry?: string;
+  }>;
+};
+
+/** Session cache when AsyncStorage native module is not ready yet. */
 const memoryManifestCache = new Map<string, string>();
 
 let asyncStorageModule: AsyncStorageLike | null | undefined;
+let registrySnapshot: RegistrySnapshot | null | undefined;
 
 /**
  * POC fetch plugin: direct manifest/bundle download without auth.
@@ -63,6 +74,16 @@ export default function (): ModuleFederationRuntimePlugin {
 
 async function fetchManifest(url: string, options: RequestInit): Promise<Response> {
   const startedAt = Date.now();
+
+  const cached = await offlineManifestResponse(url);
+  if (cached) {
+    console.log('[MF:Trace] 8.fetch.cacheHit', {
+      url,
+      type: 'manifest',
+      durationMs: Date.now() - startedAt,
+    });
+    return cached;
+  }
 
   console.log('[MF:Trace] 8.fetch.start', { url, type: 'manifest' });
 
@@ -158,14 +179,36 @@ async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function manifestStorageKey(url: string): string {
-  return `${MANIFEST_CACHE_PREFIX}${url}`;
+async function readRegistrySnapshot(): Promise<RegistrySnapshot | null> {
+  if (registrySnapshot !== undefined) {
+    return registrySnapshot;
+  }
+
+  const storage = getAsyncStorage();
+  if (!storage) {
+    registrySnapshot = null;
+    return null;
+  }
+
+  try {
+    const raw = await storage.getItem(REGISTRY_SNAPSHOT_KEY);
+    registrySnapshot = raw ? (JSON.parse(raw) as RegistrySnapshot) : null;
+  } catch {
+    registrySnapshot = null;
+  }
+
+  return registrySnapshot;
 }
 
-/**
- * Lazy AsyncStorage access — top-level import crashes at app launch because
- * MF runtime plugins load before the native bridge is ready ([runtime not ready]).
- */
+async function resolveManifestRemote(url: string) {
+  const snapshot = await readRegistrySnapshot();
+  if (!snapshot) {
+    return null;
+  }
+
+  return resolveRemoteFromManifestUrl(url, snapshot.remotes);
+}
+
 function getAsyncStorage(): AsyncStorageLike | null {
   if (asyncStorageModule !== undefined) {
     return asyncStorageModule;
@@ -185,8 +228,34 @@ function getAsyncStorage(): AsyncStorageLike | null {
 }
 
 async function getCachedManifest(url: string): Promise<string | null> {
-  const key = manifestStorageKey(url);
-  const memory = memoryManifestCache.get(key);
+  const resolved = await resolveManifestRemote(url);
+
+  if (resolved) {
+    const versionedKey = versionedManifestKey(
+      resolved.remoteName,
+      resolved.platform,
+      resolved.version
+    );
+    const memory = memoryManifestCache.get(versionedKey);
+    if (memory) {
+      return memory;
+    }
+
+    const storage = getAsyncStorage();
+    if (storage) {
+      try {
+        const versioned = await storage.getItem(versionedKey);
+        if (versioned) {
+          return versioned;
+        }
+      } catch (error) {
+        console.warn('mf-fetch-plugin: failed to read manifest cache', error);
+      }
+    }
+  }
+
+  const legacyKey = legacyManifestKey(url);
+  const memory = memoryManifestCache.get(legacyKey);
   if (memory) {
     return memory;
   }
@@ -197,7 +266,7 @@ async function getCachedManifest(url: string): Promise<string | null> {
   }
 
   try {
-    return await storage.getItem(key);
+    return await storage.getItem(legacyKey);
   } catch (error) {
     console.warn('mf-fetch-plugin: failed to read manifest cache', error);
     return null;
@@ -205,8 +274,29 @@ async function getCachedManifest(url: string): Promise<string | null> {
 }
 
 async function setCachedManifest(url: string, body: string): Promise<void> {
-  const key = manifestStorageKey(url);
-  memoryManifestCache.set(key, body);
+  const resolved = await resolveManifestRemote(url);
+
+  if (resolved) {
+    const versionedKey = versionedManifestKey(
+      resolved.remoteName,
+      resolved.platform,
+      resolved.version
+    );
+    memoryManifestCache.set(versionedKey, body);
+
+    const storage = getAsyncStorage();
+    if (storage) {
+      try {
+        await storage.setItem(versionedKey, body);
+      } catch (error) {
+        console.warn('mf-fetch-plugin: failed to write manifest cache', error);
+      }
+    }
+    return;
+  }
+
+  const legacyKey = legacyManifestKey(url);
+  memoryManifestCache.set(legacyKey, body);
 
   const storage = getAsyncStorage();
   if (!storage) {
@@ -214,7 +304,7 @@ async function setCachedManifest(url: string, body: string): Promise<void> {
   }
 
   try {
-    await storage.setItem(key, body);
+    await storage.setItem(legacyKey, body);
   } catch (error) {
     console.warn('mf-fetch-plugin: failed to write manifest cache', error);
   }
