@@ -14,6 +14,9 @@
       ],
       "travel-sdk/lib/remote-registry.prod.json": [
         "../travel-sdk/lib/remote-registry.prod.json"
+      ],
+      "travel-sdk/lib/manifestCacheKeys.js": [
+        "../travel-sdk/lib/manifestCacheKeys.js"
       ]
     }
   },

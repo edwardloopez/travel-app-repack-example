@@ -31,7 +31,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: {
     favicon: './assets/favicon.png',
   },
-  plugins: ['./plugins/withRepackXcodeBundle'],
+  plugins: [
+    './plugins/withRepackXcodeBundle',
+    './plugins/withFmtXcode26Cpp17'
+  ],
   extra: {
     // Prod registry URL (release builds fetch this at runtime).
     // remoteRegistryUrl: 'https://cdn.tuempresa.com/remote-registry.json',

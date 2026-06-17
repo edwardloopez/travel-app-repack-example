@@ -7,7 +7,8 @@
   "exports": {
     ".": "./index.js",
     "./lib/remote-registry.dev.json": "./lib/remote-registry.dev.json",
-    "./lib/remote-registry.prod.json": "./lib/remote-registry.prod.json"
+    "./lib/remote-registry.prod.json": "./lib/remote-registry.prod.json",
+    "./lib/manifestCacheKeys.js": "./lib/manifestCacheKeys.js"
   },
   "files": [
     "lib",
